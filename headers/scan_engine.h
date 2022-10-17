@@ -9,5 +9,5 @@
 
 void scan(char *optarg, bool verbose);
 void scanFilesRecursively(char *basePath, int root, bool verbose);
-double calc_rand_idx(const int* content,const long file_length, bool verbose);
+double calc_rand_idx(const int* content, const long content_length, bool verbose);
 

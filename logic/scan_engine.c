@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <pthread_time.h>
+#include <time.h>
 #include "../headers/scan_engine.h"
 
 #define BILLION  1000000000.0

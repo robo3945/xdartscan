@@ -1,45 +1,62 @@
 #include <dirent.h>
 #include <string.h>
-#include <printf.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <pthread_time.h>
 #include "../headers/scan_engine.h"
 
-char *read_file_content(char *path) {
+#define BILLION  1000000000.0
+
+int *read_file_content(char *path, long* file_lenght) {
     FILE *fp = fopen(path, "rb");
     if (fp) {
         fseek(fp, 0, SEEK_END);
-        long lengthOfFile = ftell(fp);
+        *file_lenght = ftell(fp);
 
-        char *buffer = malloc(lengthOfFile * sizeof(char));
+        int *buffer = malloc(*file_lenght * sizeof(int));
 
         fseek(fp, 0, SEEK_SET);
-        for (int i = 0; i < lengthOfFile; i++)
-            buffer[i] = (char) fgetc(fp);
+        for (int i = 0; i < *file_lenght; i++)
+            buffer[i] = fgetc(fp);
 
         fclose(fp);
 
         return buffer;
     }
 
+    printf("File access problem: %s (%ld)", path, *file_lenght);
     return NULL;
 }
 
 
 void scan(char *optarg, bool verbose) {
-    listFilesRecursively(optarg, 2, verbose);
+    struct timespec start, end;
+    clock_gettime(CLOCK_REALTIME, &start);
+    scanFilesRecursively(optarg, 2, verbose);
+    clock_gettime(CLOCK_REALTIME, &end);
+
+    // time_spent = end - start
+    double time_spent = (end.tv_sec - start.tv_sec) +
+                        (end.tv_nsec - start.tv_nsec) / BILLION;
+
+    printf("\nTime elpased is %f seconds", time_spent);
 }
 
-void listFilesRecursively(char *basePath, int root, bool verbose) {
+void scanFilesRecursively(char *basePath, int root, bool verbose) {
     int i;
     char path[2048];
     struct dirent *dp;
     DIR *dir = opendir(basePath);
 
-    if (!dir) {
-        char *content = read_file_content(basePath);
-        double H = calc_rand_idx(content, verbose);
-        printf("(H: %f)", H);
+    if (dir==NULL) {
+        long file_lenght = 0;
+        int *content = read_file_content(basePath, &file_lenght);
+        if (content != NULL) {
+            double H = calc_rand_idx(content, file_lenght, verbose);
+            free(content);
+            printf("(H: %f)", H);
+        }
         return;
     }
 
@@ -53,7 +70,7 @@ void listFilesRecursively(char *basePath, int root, bool verbose) {
             strcpy(path, basePath);
             strcat(path, "/");
             strcat(path, dp->d_name);
-            listFilesRecursively(path, root + 2, verbose);
+            scanFilesRecursively(path, root + 2, verbose);
         }
     }
 

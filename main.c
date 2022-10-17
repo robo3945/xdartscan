@@ -9,7 +9,7 @@ void print_help(char* idir);
 int main(int argc, char *argv[])
 {
     int opt;
-    bool verbose;
+    bool verbose = false;
     char* input_dir = NULL;
     if (argc >1)
         while ((opt = getopt(argc, argv, "hvi:")) != -1) {

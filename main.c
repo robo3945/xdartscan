@@ -1,53 +1,44 @@
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdbool.h>
 #include "headers/scan_engine.h"
 
 void print_help(char* idir);
 
-void print_version();
-
-
 int main(int argc, char *argv[])
 {
-    bool isCaseInsensitive = false;
     int opt;
-    char* idir;
-
-    enum { CHARACTER_MODE, WORD_MODE, LINE_MODE } mode = CHARACTER_MODE;
-
+    bool verbose;
+    char* input_dir = NULL;
     if (argc >1)
         while ((opt = getopt(argc, argv, "hvi:")) != -1) {
             switch (opt) {
+                case 'v':
+                    verbose = true;
+                    continue;
                 case 'i':
-                    idir = optarg;
-                    scan(optarg);
-                    break;
+                    input_dir = optarg;
+                    continue;
                 case 'h':
                     print_help(argv[0]);
-                case 'v':
-                    print_version();
+                    exit(EXIT_SUCCESS);
                 default:
                     print_help(argv[0]);
+                    exit(EXIT_FAILURE);
             }
         }
     else
         print_help(argv[0]);
 
-    // Now optind (declared extern int by <unistd.h>) is the index of the first non-option argument.
-    // If it is >= argc, there were no non-option arguments.
+    if (input_dir!=NULL)
+        scan(input_dir, verbose);
 
-    // ...
 }
 
 void print_help(char *idir) {
-    fprintf(stdout, "Usage: %s [-i] [dir_to_scan]\n", idir);
-    exit(EXIT_SUCCESS);
-}
-
-void print_version() {
     fprintf(stdout, "version: 0.1\n");
+    fprintf(stdout, "Usage: %s [-i] [dir_to_scan] [-x]\n", idir);
     exit(EXIT_SUCCESS);
 }
 

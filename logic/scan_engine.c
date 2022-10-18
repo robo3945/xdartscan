@@ -95,7 +95,7 @@ void scan_a_file(char *basePath, bool verbose) {
     if (content != NULL) {
         bool mg_found = false;
 
-        char magic_number_string[8];
+        char magic_number_string[8*sizeof(int)];
         sprintf(magic_number_string, "%02x%02x%02x%02x",magic_number[0],magic_number[1], magic_number[2], magic_number[3]);
 
 
@@ -107,7 +107,8 @@ void scan_a_file(char *basePath, bool verbose) {
 
         if (!mg_found) {
             double H = calc_rand_idx(content, file_lenght, verbose);
-            printf("(H: %f, magic#: %s)", H,magic_number_string);
+            if (H>7.90 && verbose)
+                printf("(H: %f, magic#: %s)", H,magic_number_string);
         }
         else if (verbose)
             printf("(magic found! (%s))", magic_number_string);

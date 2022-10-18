@@ -8,24 +8,27 @@
 
 #define BILLION  1000000000.0
 
-int *read_file_content(char *path, long* file_lenght) {
+int *read_file_content(char *path, long* length_out, int* magic_number_out) {
     FILE *fp = fopen(path, "rb");
     if (fp) {
         fseek(fp, 0, SEEK_END);
-        *file_lenght = ftell(fp);
+        *length_out = ftell(fp);
 
-        int *buffer = malloc(*file_lenght * sizeof(int));
+        int *buffer = malloc(*length_out * sizeof(int));
 
         fseek(fp, 0, SEEK_SET);
-        for (int i = 0; i < *file_lenght; i++)
+        for (int i = 0; i < *length_out; i++) {
             buffer[i] = fgetc(fp);
+            if (i < 4)
+                magic_number_out[i] = buffer[i];
+        }
 
         fclose(fp);
 
         return buffer;
     }
 
-    printf("File access problem: %s (%ld)", path, *file_lenght);
+    printf("File access problem: %s (%ld)", path, *length_out);
     return NULL;
 }
 
@@ -51,12 +54,14 @@ void scanFilesRecursively(char *basePath, int root, bool verbose) {
 
     if (dir==NULL) {
         long file_lenght = 0;
-        int *content = read_file_content(basePath, &file_lenght);
+        int* magic_number = malloc(4 * sizeof(int));
+        int *content = read_file_content(basePath, &file_lenght, magic_number);
         if (content != NULL) {
             double H = calc_rand_idx(content, file_lenght, verbose);
             free(content);
-            printf("(H: %f)", H);
+            printf("(H: %f, magic#: %02x%02x%02x%02x)", H,magic_number[0],magic_number[1], magic_number[2], magic_number[3]);
         }
+        free(magic_number);
         return;
     }
 

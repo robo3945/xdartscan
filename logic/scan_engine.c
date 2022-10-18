@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <time.h>
 #include "../headers/scan_engine.h"
+#include "../headers/file_signatures.h"
 
 #define BILLION  1000000000.0
 
@@ -46,6 +47,12 @@ void scan(char *optarg, bool verbose) {
     printf("\nTime elpased is %f seconds", time_spent);
 }
 
+/**
+ * Scan all files
+ * @param basePath
+ * @param root
+ * @param verbose
+ */
 void scanFilesRecursively(char *basePath, int root, bool verbose) {
     int i;
     char path[2048];
@@ -53,15 +60,7 @@ void scanFilesRecursively(char *basePath, int root, bool verbose) {
     DIR *dir = opendir(basePath);
 
     if (dir==NULL) {
-        long file_lenght = 0;
-        int* magic_number = malloc(4 * sizeof(int));
-        int *content = read_file_content(basePath, &file_lenght, magic_number);
-        if (content != NULL) {
-            double H = calc_rand_idx(content, file_lenght, verbose);
-            free(content);
-            printf("(H: %f, magic#: %02x%02x%02x%02x)", H,magic_number[0],magic_number[1], magic_number[2], magic_number[3]);
-        }
-        free(magic_number);
+        scan_a_file(basePath, verbose);
         return;
     }
 
@@ -80,4 +79,39 @@ void scanFilesRecursively(char *basePath, int root, bool verbose) {
     }
 
     closedir(dir);
+}
+
+/**
+ * Single file scan
+ *
+ * @param basePath
+ * @param verbose
+ */
+void scan_a_file(char *basePath, bool verbose) {
+    long file_lenght = 0;
+    int magic_number[4];
+
+    int *content = read_file_content(basePath, &file_lenght, magic_number);
+    if (content != NULL) {
+        bool mg_found = false;
+
+        char magic_number_string[8];
+        sprintf(magic_number_string, "%02x%02x%02x%02x",magic_number[0],magic_number[1], magic_number[2], magic_number[3]);
+
+
+        for (int j=0;j<MAGIC_NUMBER_LENGTH;j++)
+            if (strstr(well_known_magic_number[j].number, magic_number_string)) {
+                mg_found = true;
+                break;
+            }
+
+        if (!mg_found) {
+            double H = calc_rand_idx(content, file_lenght, verbose);
+            printf("(H: %f, magic#: %s)", H,magic_number_string);
+        }
+        else if (verbose)
+            printf("(magic found! (%s))", magic_number_string);
+
+        free(content);
+    }
 }

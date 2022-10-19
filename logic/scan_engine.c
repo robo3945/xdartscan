@@ -6,8 +6,8 @@
 #include <time.h>
 #include "../headers/scan_engine.h"
 #include "../headers/file_signatures.h"
+#include "../headers/config.h"
 
-#define BILLION  1000000000.0
 
 unsigned char *read_file_content(char *path, long* length_out, unsigned char* magic_number_out) {
 
@@ -130,7 +130,7 @@ void scan_a_file(char *basePath, bool verbose) {
         if (!mg_found) {
             double H = calc_rand_idx(content, file_length, verbose);
             // TODO: spostare il parametro di configurazione da qualche altra parte
-            if (H>7.90)
+            if (H > ENTROPY_TH)
                 printf("(H: %f, magic#: %s)", H,magic_number_string);
             else
                 printf("(low entropy)");

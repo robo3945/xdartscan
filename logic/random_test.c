@@ -2,10 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <stdio.h>
-
-static const int MAX_SET_SIZE = 256;
-const bool DEBUG = false;
-
+#include "../headers/config.h"
 
 /**
  * Computes the Entropy factor
@@ -41,30 +38,30 @@ double calc_rand_idx(const unsigned char *content, const long content_length, bo
         }
     }
 
-    if (DEBUG) printf("\n************************************************");
-    if (DEBUG) printf("\nSet: ");
+    if (DEBUG_PRINT) printf("\n************************************************");
+    if (DEBUG_PRINT) printf("\nSet: ");
     for (int i=0,j=0;i<MAX_SET_SIZE;i++)
         if (bucket[i] >0)
-            if (DEBUG) printf("%d: ('%c', %d) - ", j++, i, bucket[i]);
+            if (DEBUG_PRINT) printf("%d: ('%c', %d) - ", j++, i, bucket[i]);
 
     unsigned long l = content_length;
-    if (DEBUG)
+    if (DEBUG_PRINT)
         printf("\nSet_length: %lu", l);
 
-    if (DEBUG) printf("\nSet with fract: ");
+    if (DEBUG_PRINT) printf("\nSet with fract: ");
     double H = 0;
     for (int i = 0, j = 0; i < MAX_SET_SIZE; i++)
         if (bucket[i] > 0) {
             double fract = (double) bucket[i] / (double) l;
             H -= fract * log2(fract);
-            if (DEBUG)
+            if (DEBUG_PRINT)
                 printf("%d: ('%c': %d, fract: %f) - ", j++, i, bucket[i], fract);
         }
 
-    if (DEBUG)
+    if (DEBUG_PRINT)
         printf("\nCrypto values: H: %f", H);
 
-    if (DEBUG) printf("\n************************************************\n");
+    if (DEBUG_PRINT) printf("\n************************************************\n");
 
     free(bucket);
 

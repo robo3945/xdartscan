@@ -33,9 +33,9 @@ double calc_rand_idx(const unsigned char *content, const long content_length, bo
 
     // Calcola le occorrenze di ogni carattere
     for (int i=0; i < content_length; i++) {
-        if (content[i] >= 0 && content[i]<=MAX_SET_SIZE) {
+        // TODO: check non necessario perché gli unsigned char sono compresi nell'intervallo [0,255]
+        if (content[i] >= 0 && content[i]<=MAX_SET_SIZE)
             bucket[content[i]]++;
-        }
     }
 
     if (DEBUG_PRINT) printf("\n************************************************");

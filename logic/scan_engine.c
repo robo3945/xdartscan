@@ -60,13 +60,16 @@ unsigned char *read_file_content(char *path, long* length_out, unsigned char* ma
 void scan(char *optarg, bool verbose) {
     struct timespec start, end;
     clock_gettime(CLOCK_REALTIME, &start);
-    scanFilesRecursively(optarg, 2, verbose);
+    int files_processed[1];
+    files_processed[0] = 0;
+    scanFilesRecursively(optarg, 2, verbose, files_processed);
     clock_gettime(CLOCK_REALTIME, &end);
 
     // time_spent = end - start
     double time_spent = (end.tv_sec - start.tv_sec) +
                         (end.tv_nsec - start.tv_nsec) / BILLION;
 
+    printf("\nNumber of files processed: %d", *files_processed);
     printf("\nTime elpased is %f seconds", time_spent);
 }
 
@@ -76,7 +79,7 @@ void scan(char *optarg, bool verbose) {
  * @param root
  * @param verbose
  */
-void scanFilesRecursively(char *basePath, int root, bool verbose) {
+void scanFilesRecursively(char *basePath, int root, bool verbose, int* num_files_processed_out) {
     int i;
     char path[2048];
     struct dirent *dp;
@@ -84,6 +87,7 @@ void scanFilesRecursively(char *basePath, int root, bool verbose) {
 
     if (dir==NULL) {
         scan_a_file(basePath, verbose);
+        num_files_processed_out[0]++;
         return;
     }
 
@@ -97,7 +101,7 @@ void scanFilesRecursively(char *basePath, int root, bool verbose) {
             strcpy(path, basePath);
             strcat(path, "/");
             strcat(path, dp->d_name);
-            scanFilesRecursively(path, root + 2, verbose);
+            scanFilesRecursively(path, root + 2, verbose, num_files_processed_out);
         }
     }
 

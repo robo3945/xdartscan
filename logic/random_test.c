@@ -12,30 +12,20 @@
  * @param verbose
  * @return
  *
- *
-
-    Entropy randomness test
-
-        Binary Entropy from: http://rosettacode.org/wiki/Entropy#Python:_More_succinct_version
-
-    For every byte we have 8 bits, so 256 different characters. Maximum entropy is for a string
-    that contains an equal distribution on every character:
-
-    H(X) = 256 * 1/256 * -log2(1/256) = 1 * log2(256) = 8
-
- *
- *
  */
-double calc_rand_idx(const unsigned char *content, const long content_length, bool verbose) {
+double calc_rand_idx(const unsigned char *content, const long content_length) {
 
-    // Alloca un bucket di MAX_SET_SIZE interi per contare le occorrenze di ogni carattere
+    // creates a bucket array to count the frequency of every char read from the file
     int* bucket  = calloc(MAX_SET_SIZE, sizeof(int));
 
-    // Calcola le occorrenze di ogni carattere
+    // computes the frequency of every character
     for (int i=0; i < content_length; i++) {
-        // TODO: check non necessario perché gli unsigned char sono compresi nell'intervallo [0,255]
-        if (content[i] >= 0 && content[i]<=MAX_SET_SIZE)
-            bucket[content[i]]++;
+        // in the bucket at the position c[i] puts the frequency
+        // implicit int cast of c[i] is the position in the bucket
+
+        // redundancy check
+        //if (content[i] >= 0 && content[i]<=MAX_SET_SIZE)
+        bucket[(int)content[i]]++;
     }
 
     if (DEBUG_PRINT) printf("\n************************************************");

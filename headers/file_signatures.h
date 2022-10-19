@@ -118,7 +118,7 @@ MagicNumber well_known_magic_number[] = {
         ,{"03","[['dat', 'MapInfo Native Data Format'], ['db3', 'dBASE III file']]"}
         ,{"55464f4f72626974","[['dat', 'UFO Capture map file']]"}
         ,{"436c69656e742055","[['dat', 'IE History file']]"}
-        ,{"50455354","[['dat', 'PestPatrol data|scan strings']]"}
+        ,{"50455354","[['dat', 'PestPatrol data|main_scan strings']]"}
         ,{"4e41565452414646","[['dat', 'TomTom traffic data']]"}
         ,{"43524547","[['dat', 'Win9x registry hive']]"}
         ,{"52415a4154444231","[['dat', 'Shareaza (P2P) thumbnail']]"}

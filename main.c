@@ -32,12 +32,12 @@ int main(int argc, char *argv[])
         print_help(argv[0]);
 
     if (input_dir!=NULL)
-        scan(input_dir, verbose);
+        main_scan(input_dir, verbose);
 
 }
 
 void print_help(char *idir) {
-    fprintf(stdout, "version: 0.1\n");
+    fprintf(stdout, "XDartScan v. 1.0b\n");
     fprintf(stdout, "Usage: %s [-i] [dir_to_scan] [-x]\n", idir);
     exit(EXIT_SUCCESS);
 }

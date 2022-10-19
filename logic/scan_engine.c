@@ -9,21 +9,44 @@
 
 #define BILLION  1000000000.0
 
-int *read_file_content(char *path, long* length_out, int* magic_number_out) {
+unsigned char *read_file_content(char *path, long* length_out, unsigned char* magic_number_out) {
+
+    unsigned char *buffer = NULL;
     FILE *fp = fopen(path, "rb");
     if (fp) {
-        fseek(fp, 0, SEEK_END);
-        *length_out = ftell(fp);
+        if (fseek(fp, 0, SEEK_END)==0) {
 
-        int *buffer = malloc(*length_out * sizeof(int));
+            // Take the file length
+            *length_out = ftell(fp);
+            if (*length_out == -1)
+            {
+                fprintf(stderr, "File length problem: %s (%ld)", path, *length_out);
+                return NULL;
+            }
 
-        fseek(fp, 0, SEEK_SET);
-        for (int i = 0; i < *length_out; i++) {
-            buffer[i] = fgetc(fp);
-            if (i < 4)
-                magic_number_out[i] = buffer[i];
+            // Allocates the buffer for the content
+            buffer = (unsigned char*) malloc(*length_out * sizeof(unsigned char));
+            if (fseek(fp, 0, SEEK_SET)!=0)
+            {
+                fprintf(stderr, "File Seek set to start problem: %s (%ld)", path, *length_out);
+                return NULL;
+            }
+
+            // Read the file content
+            fread(buffer, sizeof(unsigned char), *length_out, fp);
+            if ( ferror( fp ) != 0 ) {
+                fprintf(stderr, "File access problem: %s (%ld)", path, *length_out);
+                return NULL;
+            }
+
+            // Set the magic number
+            magic_number_out[0] = buffer[0];
+            magic_number_out[1] = buffer[1];
+            magic_number_out[2] = buffer[2];
+            magic_number_out[3] = buffer[3];
+
+
         }
-
         fclose(fp);
 
         return buffer;
@@ -88,16 +111,15 @@ void scanFilesRecursively(char *basePath, int root, bool verbose) {
  * @param verbose
  */
 void scan_a_file(char *basePath, bool verbose) {
-    long file_lenght = 0;
-    int magic_number[4];
+    long file_length = 0;
+    unsigned char magic_number[4];
 
-    int *content = read_file_content(basePath, &file_lenght, magic_number);
+    unsigned char *content = read_file_content(basePath, &file_length, magic_number);
     if (content != NULL) {
         bool mg_found = false;
 
-        char magic_number_string[8*sizeof(int)];
+        char magic_number_string[9];
         sprintf(magic_number_string, "%02x%02x%02x%02x",magic_number[0],magic_number[1], magic_number[2], magic_number[3]);
-
 
         for (int j=0;j<MAGIC_NUMBER_LENGTH;j++)
             if (strstr(well_known_magic_number[j].number, magic_number_string)) {
@@ -106,9 +128,12 @@ void scan_a_file(char *basePath, bool verbose) {
             }
 
         if (!mg_found) {
-            double H = calc_rand_idx(content, file_lenght, verbose);
-            if (H>7.90 && verbose)
+            double H = calc_rand_idx(content, file_length, verbose);
+            // TODO: spostare il parametro di configurazione da qualche altra parte
+            if (H>7.90)
                 printf("(H: %f, magic#: %s)", H,magic_number_string);
+            else
+                printf("(low entropy)");
         }
         else if (verbose)
             printf("(magic found! (%s))", magic_number_string);

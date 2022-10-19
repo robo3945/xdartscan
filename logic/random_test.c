@@ -29,15 +29,16 @@ const bool DEBUG = false;
  *
  *
  */
-double calc_rand_idx(const int *content, const long content_length, bool verbose) {
+double calc_rand_idx(const unsigned char *content, const long content_length, bool verbose) {
 
     // Alloca un bucket di MAX_SET_SIZE interi per contare le occorrenze di ogni carattere
     int* bucket  = calloc(MAX_SET_SIZE, sizeof(int));
 
     // Calcola le occorrenze di ogni carattere
     for (int i=0; i < content_length; i++) {
-        if (content[i] > 0 && content[i]<=MAX_SET_SIZE)
+        if (content[i] >= 0 && content[i]<=MAX_SET_SIZE) {
             bucket[content[i]]++;
+        }
     }
 
     if (DEBUG) printf("\n************************************************");

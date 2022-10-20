@@ -3,11 +3,17 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include "headers/scan_engine.h"
+#include "headers/config.h"
+#include "misc/config_manager.h"
 
 void print_help(char* idir);
 
 int main(int argc, char *argv[])
 {
+    // TODO: prendere il puntamento del file anche da riga di comando
+    if (read_config_file("config.ini"))
+        read_config_file("../config.ini");
+
     int opt;
     bool verbose = false;
     char* input_dir = NULL;

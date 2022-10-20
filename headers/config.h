@@ -1,9 +1,13 @@
 #ifndef XDARTSCAN_CONFIG_H
 #define XDARTSCAN_CONFIG_H
 
-#define ENTROPY_TH 7.90
+// TODO: move the config params into an external file
+extern double ENTROPY_TH;
+extern int DEBUG_PRINT;
+
 #define BILLION  1000000000.0
 #define MAX_SET_SIZE 256
-static const bool DEBUG_PRINT = false;
+
+void init_config_variable();
 
 #endif //XDARTSCAN_CONFIG_H

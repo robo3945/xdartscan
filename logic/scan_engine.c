@@ -50,14 +50,6 @@ unsigned char *read_file_content(char *path, long* length_out, unsigned char* ma
             // Set the magic number
             memcpy(magic_number_out, buffer, 4 * sizeof(unsigned char));
 
-            /*
-            magic_number_out[0] = buffer[0];
-            magic_number_out[1] = buffer[1];
-            magic_number_out[2] = buffer[2];
-            magic_number_out[3] = buffer[3];
-            */
-
-
         }
         fclose(fp);
 

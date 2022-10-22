@@ -8,6 +8,7 @@ typedef struct GlobalStatsStruct {
     int num_files_with_high_entropy;
     int num_files_with_low_entropy;
     int num_files_with_well_known_magic_number;
+    int num_files_with_size_zero_or_less;
 } GlobStat;
 
 extern GlobStat statistics;

@@ -1,7 +1,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "headers/scan_engine.h"
-#include "misc/config_manager.h"
+#include "headers/config_manager.h"
 #include "headers/config.h"
 
 

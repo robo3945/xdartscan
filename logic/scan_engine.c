@@ -42,8 +42,8 @@ unsigned char *read_file_content(char *path, long *length_out, unsigned char *ma
             }
 
             // TODO: spostare in configurazione
-            if (*length_out>10000000)
-                *length_out=10000000;
+            if (*length_out>MAX_FILE_SIZE)
+                *length_out=MAX_FILE_SIZE;
 
             // Allocates the buffer for the content
             buffer = (unsigned char *) malloc(*length_out * sizeof(unsigned char));

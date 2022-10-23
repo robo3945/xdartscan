@@ -4,6 +4,7 @@
 extern double ENTROPY_TH;
 extern int DEBUG_PRINT;
 extern int MIN_FILE_SIZE;
+extern int MAX_FILE_SIZE;
 
 typedef struct GlobalStatsStruct {
     int num_files;

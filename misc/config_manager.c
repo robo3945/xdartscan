@@ -16,6 +16,7 @@
 double ENTROPY_TH=7.00;
 int DEBUG_PRINT=1;
 int MIN_FILE_SIZE=500; //bytes
+int MAX_FILE_SIZE=10000000; //bytes
 
 // Definition for global stats
 GlobStat stats = {};
@@ -78,6 +79,11 @@ int read_config_file(char* filename) {
                                 MIN_FILE_SIZE = strtol(param_value, NULL, 10);
                                 printf("Config param: %s value: %d\n","MIN_FILE_SIZE",MIN_FILE_SIZE);
                             }
+                            else if (strncmp(param_name, "MAX_FILE_SIZE", MAX_FILE_SIZE - 1) == 0) {
+                                MAX_FILE_SIZE = strtol(param_value, NULL, 10);
+                                printf("Config param: %s value: %d\n","MAX_FILE_SIZE",MAX_FILE_SIZE);
+                            }
+
 
 
                         }

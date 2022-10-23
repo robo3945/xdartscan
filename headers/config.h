@@ -3,15 +3,18 @@
 
 extern double ENTROPY_TH;
 extern int DEBUG_PRINT;
+extern int MIN_FILE_SIZE;
+
 typedef struct GlobalStatsStruct {
     int num_files;
     int num_files_with_high_entropy;
     int num_files_with_low_entropy;
     int num_files_with_well_known_magic_number;
     int num_files_with_size_zero_or_less;
+    int num_files_with_min_size;
 } GlobStat;
 
-extern GlobStat statistics;
+extern GlobStat stats;
 
 #define BILLION  1000000000.0
 #define MAX_SET_SIZE 256

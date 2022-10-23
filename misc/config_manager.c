@@ -15,13 +15,10 @@
 // Default value
 double ENTROPY_TH=7.00;
 int DEBUG_PRINT=1;
+int MIN_FILE_SIZE=500; //bytes
 
-// Definition for global statistics
-GlobStat statistics = {
-        0,
-        0,
-        0
-};
+// Definition for global stats
+GlobStat stats = {};
 
 char* trim(const char *src)
 {
@@ -50,6 +47,7 @@ int read_config_file(char* filename) {
     char line[CONFIG_MAXLINE];
 
     if ((fp = fopen(filename, "r")) != NULL) {
+        printf("\n---------------------------- CONFIG ---------------------------- \n");
         while (!feof(fp)) {
             fgets(line, CONFIG_MAXLINE, fp);
 
@@ -68,10 +66,20 @@ int read_config_file(char* filename) {
                     case 1:
                         if (param_name) {
                             param_value = trim(token);
-                            if (strncmp(param_name, "ENTROPY_TH", CONFIG_MAXPARAM - 1) == 0)
+                            if (strncmp(param_name, "ENTROPY_TH", CONFIG_MAXPARAM - 1) == 0) {
                                 ENTROPY_TH = strtod(param_value, NULL);
-                            else if (strncmp(param_name, "DEBUG_PRINT", CONFIG_MAXPARAM - 1) == 0)
+                                printf("Config param: %s value: %f\n","ENTROPY_TH",ENTROPY_TH);
+                            }
+                            else if (strncmp(param_name, "DEBUG_PRINT", CONFIG_MAXPARAM - 1) == 0) {
                                 DEBUG_PRINT = strtol(param_value, NULL, 10);
+                                printf("Config param: %s value: %d\n","DEBUG_PRINT",DEBUG_PRINT);
+                            }
+                            else if (strncmp(param_name, "MIN_FILE_SIZE", MIN_FILE_SIZE - 1) == 0) {
+                                MIN_FILE_SIZE = strtol(param_value, NULL, 10);
+                                printf("Config param: %s value: %d\n","MIN_FILE_SIZE",MIN_FILE_SIZE);
+                            }
+
+
                         }
                         else
                             fprintf(stderr, "Param name is NULL: %s\n", token);
@@ -94,11 +102,10 @@ int read_config_file(char* filename) {
 
         }
         printf("Configuration file correctly read, path: \"%s\"\n", filename);
+        printf("\n---------------------------- ///// ---------------------------- \n");
 
-    } else {
-        fprintf(stderr, "Access problem to the configuration file, path: \"%s\"\n", filename);
+    } else
         return 1;
-    }
 
     return 0;
 }

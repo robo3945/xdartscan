@@ -35,15 +35,20 @@ unsigned char *read_file_content(char *path, long *length_out, unsigned char *ma
                 return NULL;
             }
 
-            if (*length_out < MIN_FILE_SIZE) {
+            if (*length_out < MAGIC_NUMBER_BYTE_SIZE) {
+                stats.num_files_with_size_zero_or_less++;
+                fclose(fp);
+                return NULL;
+            }
+
+            if (*length_out>=MAGIC_NUMBER_BYTE_SIZE && *length_out < MIN_FILE_SIZE) {
                 stats.num_files_with_min_size++;
                 fclose(fp);
                 return NULL;
             }
 
-            // TODO: spostare in configurazione
-            if (*length_out>MAX_FILE_SIZE)
-                *length_out=MAX_FILE_SIZE;
+            if (*length_out > MAX_FILE_SIZE)
+                *length_out = MAX_FILE_SIZE;
 
             // Allocates the buffer for the content
             buffer = (unsigned char *) malloc(*length_out * sizeof(unsigned char));
@@ -99,8 +104,10 @@ void main_scan(char *root_path, bool verbose) {
     printf("\nNumber of files scanned:                                      %d", stats.num_files);
     printf("\nNumber of files with High Entropy:                            %d", stats.num_files_with_high_entropy);
     printf("\nNumber of files with low Entropy:                             %d", stats.num_files_with_low_entropy);
-    printf("\nNumber of files with Well Known Magic Number:                 %d", stats.num_files_with_well_known_magic_number);
-    printf("\nNumber of files with zero size or less of magic number size:  %d", stats.num_files_with_size_zero_or_less);
+    printf("\nNumber of files with Well Known Magic Number:                 %d",
+           stats.num_files_with_well_known_magic_number);
+    printf("\nNumber of files with zero size or less of magic number size:  %d",
+           stats.num_files_with_size_zero_or_less);
     printf("\nNumber of files with length < min_size:                       %d", stats.num_files_with_min_size);
 
     printf("\nTime elpased is %f seconds", time_spent);
@@ -120,6 +127,7 @@ void scan_files_recursively(char *base_path, int indent, bool verbose) {
     DIR *dir = opendir(base_path);
 
     if (dir == NULL) {
+        stats.num_files++;
         scan_a_file(base_path, verbose);
         return;
     }
@@ -156,37 +164,31 @@ void scan_a_file(char *basePath, bool verbose) {
     unsigned char *content = read_file_content(basePath, &file_length, magic_number);
     if (content != NULL) {
         bool magic_number_found = false;
-        stats.num_files++;
         char magic_number_string[MAGIC_NUMBER_BYTE_SIZE * 2 + 1];
 
-        if (file_length && file_length > MAGIC_NUMBER_BYTE_SIZE) {
-            sprintf(magic_number_string, "%02x%02x%02x%02x", magic_number[0], magic_number[1], magic_number[2],
-                    magic_number[3]);
+        sprintf(magic_number_string, "%02x%02x%02x%02x", magic_number[0], magic_number[1], magic_number[2],
+                magic_number[3]);
 
-            for (int j = 0; j < MAGIC_NUMBER_LENGTH; j++)
-                if (strnstr(well_known_magic_number[j].number, magic_number_string, strlen(magic_number_string))) {
-                    magic_number_found = true;
-                    break;
-                }
+        for (int j = 0; j < MAGIC_NUMBER_LENGTH; j++)
+            if (strnstr(well_known_magic_number[j].number, magic_number_string, strlen(magic_number_string))) {
+                magic_number_found = true;
+                break;
+            }
 
-            if (!magic_number_found) {
-                double H = calc_rand_idx(content, file_length);
-                if (H > ENTROPY_TH) {
-                    stats.num_files_with_high_entropy++;
-                    printf("(>>> H: %f)", H);
-                } else {
-                    printf("(low entropy H: %f)", H);
-                    stats.num_files_with_low_entropy++;
-                }
+        if (!magic_number_found) {
+            double H = calc_rand_idx(content, file_length);
+            if (H > ENTROPY_TH) {
+                stats.num_files_with_high_entropy++;
+                printf("(>>> H: %f)", H);
             } else {
-                if (verbose)
-                    printf("(magic found: %s)", magic_number_string);
-
-                stats.num_files_with_well_known_magic_number++;
+                printf("(low entropy H: %f)", H);
+                stats.num_files_with_low_entropy++;
             }
         } else {
-            printf("(file size < %d bytes)", MAGIC_NUMBER_BYTE_SIZE);
-            stats.num_files_with_size_zero_or_less++;
+            if (verbose)
+                printf("(magic found: %s)", magic_number_string);
+
+            stats.num_files_with_well_known_magic_number++;
         }
 
 

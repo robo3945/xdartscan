@@ -34,7 +34,7 @@ int is_regular_file(const char *path) {
 
 char* trim(const char *src)
 {
-    char *dst = malloc(sizeof(char)*strlen(src));
+    char *dst = malloc(sizeof(char)*(strlen(src)+1));
     int k=0;
     for (int j = 0; src[j] != '\0'; j++) {
 

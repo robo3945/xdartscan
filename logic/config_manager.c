@@ -1,8 +1,3 @@
-//
-// Created by roberto.battistoni on 20/10/2022.
-//
-
-
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -99,4 +94,33 @@ int read_config_file(char* filename) {
         return 1;
 
     return 0;
+}
+
+/**
+ * Function to sort signatures
+ *
+ * trim the signatures to the first 4 bytes and then sort the array
+ *
+ */
+void sort_signatures(MagicNumber* mn_array){
+
+    // First of all, trim the signatures to first 4 bytes
+
+    for (int i=0;i<SIGNATURES_VECTOR_LENGTH;i++)
+        // terminate the string at 4th byte
+        *(mn_array[i].number + 4) = '\0';
+
+
+    int min;
+    for(int i=0; i<SIGNATURES_VECTOR_LENGTH; i++){
+        min=i;
+        for (int j = i+1;j < SIGNATURES_VECTOR_LENGTH; j++){
+            if (strtol(mn_array[j].number,NULL, 16) < strtol(mn_array[min].number, NULL, 16))
+                min=j;
+        }
+        MagicNumber t = mn_array[min];
+        mn_array[min] = mn_array[i];
+        mn_array[i] = t;
+    }
+
 }

@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include "../headers/config_manager.h"
 #include "../headers/config.h"
+#include "../headers/utils.h"
 
 #define CONFIG_MAXLINE 2048
 #define CONFIG_MAXPARAM 256
@@ -20,22 +21,6 @@ int MAX_FILE_SIZE=10000000; //bytes
 
 // Definition for global stats
 GlobStat stats = {};
-
-char* trim(const char *src)
-{
-    char *dst = malloc(sizeof(char)*CONFIG_MAXPARAM);
-    int k=0;
-    for (int j = 0; src[j] != '\0'; j++) {
-
-        if (!(src[j] == ' ' || src[j] == '\t' || src[j] == '\n')) {
-            dst[k] = src[j];
-            k++;
-        }
-    }
-    dst[k] = 0;
-
-    return dst;
-}
 
 /**
  * read the config file

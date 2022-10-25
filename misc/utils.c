@@ -1,3 +1,7 @@
+#include "../headers/utils.h"
+#include "../headers/config.h"
+#include "../headers/config_manager.h"
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -26,4 +30,20 @@ int is_regular_file(const char *path) {
     struct stat path_stat;
     return !stat(path, &path_stat) &&
            (S_ISREG(path_stat.st_mode));
+}
+
+char* trim(const char *src)
+{
+    char *dst = malloc(sizeof(char)*strlen(src));
+    int k=0;
+    for (int j = 0; src[j] != '\0'; j++) {
+
+        if (!(src[j] == ' ' || src[j] == '\t' || src[j] == '\n')) {
+            dst[k] = src[j];
+            k++;
+        }
+    }
+    dst[k] = 0;
+
+    return dst;
 }

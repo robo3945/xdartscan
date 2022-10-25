@@ -10,9 +10,8 @@ void print_help(char* idir);
 int main(int argc, char *argv[])
 {
     // TODO: costruire il file CSV con i risultati
-    // TODO: prendere il puntamento del file anche da riga di comando
+    // TODO: prendere il puntamento del file di configurazione anche da riga di comando
     // TODO: Binary search for the signatures check (magic number)
-    // TODO: config: minimum file size to analyze
     if (read_config_file("config.ini"))
         read_config_file("../config.ini");
 

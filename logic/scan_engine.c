@@ -7,7 +7,6 @@
 #include "../headers/scan_engine.h"
 #include "../headers/file_signatures.h"
 #include "../headers/config.h"
-#include "../headers/utils.h"
 
 
 static const int MAGIC_NUMBER_BYTE_SIZE = 4;
@@ -170,7 +169,7 @@ void scan_a_file(char *basePath, bool verbose) {
                 magic_number[3]);
 
         for (int j = 0; j < MAGIC_NUMBER_LENGTH; j++)
-            if (strnstr(well_known_magic_number[j].number, magic_number_string, strlen(magic_number_string))) {
+            if (strncmp(well_known_magic_number[j].number, magic_number_string, strlen(magic_number_string)) == 0) {
                 magic_number_found = true;
                 break;
             }

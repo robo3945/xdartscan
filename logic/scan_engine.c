@@ -5,10 +5,8 @@
 #include <stdio.h>
 #include <time.h>
 #include "../headers/scan_engine.h"
-#include "../headers/file_signatures.h"
 #include "../headers/config.h"
 #include "../headers/config_manager.h"
-
 
 static const int MAGIC_NUMBER_BYTE_SIZE = 4;
 
@@ -412,6 +410,7 @@ MagicNumber well_known_magic_number[] = {
         ,{"fffbd4","['mp3', 'MP3']"}
 };
 
+
 /**
  * The main scan function
  *
@@ -423,7 +422,7 @@ void main_scan(char *root_path, bool verbose) {
     clock_gettime(CLOCK_REALTIME, &start);
 
     // prepare the Signatures
-    //sort_signatures(well_known_magic_number);
+    sort_signatures(well_known_magic_number);
 
     printf(">>> %s", root_path);
     scan_files_recursively(root_path, 2, verbose);
@@ -572,11 +571,13 @@ void scan_a_file(char *basePath, bool verbose) {
         sprintf(magic_number_string, "%02x%02x%02x%02x", magic_number[0], magic_number[1], magic_number[2],
                 magic_number[3]);
 
+        // TODO: introduce the binary search for the ordered set
         for (int j = 0; j < SIGNATURES_VECTOR_LENGTH; j++)
-            if (strncmp(well_known_magic_number[j].number, magic_number_string, strlen(magic_number_string)) == 0) {
+            if (strncmp(well_known_magic_number[j].number8, magic_number_string, strlen(magic_number_string)) == 0) {
                 magic_number_found = true;
                 break;
             }
+
 
         if (!magic_number_found) {
             double H = calc_rand_idx(content, file_length);

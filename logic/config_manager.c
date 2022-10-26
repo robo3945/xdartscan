@@ -1,6 +1,7 @@
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
+#include <strings.h>
+#include "../headers/file_signatures.h"
 #include "../headers/config_manager.h"
 #include "../headers/config.h"
 #include "../headers/utils.h"
@@ -105,22 +106,37 @@ int read_config_file(char* filename) {
 void sort_signatures(MagicNumber* mn_array){
 
     // First of all, trim the signatures to first 4 bytes
+    for (int i=0;i<SIGNATURES_VECTOR_LENGTH;i++) {
+        char* n = mn_array[i].number;
+        int size = 8;
+        if (strlen(n) <size)
+            size = strlen(n);
 
-    for (int i=0;i<SIGNATURES_VECTOR_LENGTH;i++)
-        // terminate the string at 4th byte
-        *(mn_array[i].number + 4) = '\0';
-
+        mn_array[i].number8 = malloc((size + 1) * sizeof(char));
+        strncpy(mn_array[i].number8, mn_array[i].number, size * sizeof(char) );
+        mn_array[i].number8[size]=0;
+    }
 
     int min;
     for(int i=0; i<SIGNATURES_VECTOR_LENGTH; i++){
         min=i;
         for (int j = i+1;j < SIGNATURES_VECTOR_LENGTH; j++){
-            if (strtol(mn_array[j].number,NULL, 16) < strtol(mn_array[min].number, NULL, 16))
+            if (strtol(mn_array[j].number8, NULL, 16) < strtol(mn_array[min].number8, NULL, 16))
                 min=j;
         }
+
+        // Swap the objects
         MagicNumber t = mn_array[min];
         mn_array[min] = mn_array[i];
         mn_array[i] = t;
     }
 
+    if (DEBUG_PRINT) {
+        printf("\n************************************************\n");
+        printf("Signatures table print\n");
+        for (int i = 0; i < SIGNATURES_VECTOR_LENGTH; ++i) {
+            printf("%s-%s-%s\n", mn_array[i].number8, mn_array[i].number, mn_array[i].types);
+        }
+        printf("\n************************************************\n");
+    }
 }

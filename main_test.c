@@ -3,15 +3,23 @@
 #include "headers/scan_engine.h"
 #include "headers/config_manager.h"
 #include "headers/config.h"
+#include "headers/file_signatures.h"
 
 
 void test_config_read();
 void test_entropy();
+void sort_signs();
 
 int main(int argc, char *argv[])
 {
     //test_entropy();
-    test_config_read();
+    //test_config_read();
+    sort_signs();
+
+}
+
+void sort_signs() {
+    sort_signatures(well_known_magic_number);
 }
 
 void test_config_read() {

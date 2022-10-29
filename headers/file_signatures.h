@@ -1,13 +1,15 @@
 #ifndef XDARTSCAN_FILE_SIGNATURES_H
 #define XDARTSCAN_FILE_SIGNATURES_H
 
-
 typedef struct MN
 {
-    char* number;
+    char* number_s;
     char* types;
-    char* number8;  // number truncated to 4 bytes
+    char* number8_s;        // number_s truncated to 8 bytes
+    unsigned long number8_ul; // number as unsigned long
 } MagicNumber;
+
+extern MagicNumber well_known_magic_number[];
 
 #define SIGNATURES_VECTOR_LENGTH 397
 

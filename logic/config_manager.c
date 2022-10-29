@@ -18,6 +18,8 @@ int MAX_FILE_SIZE=10000000; //bytes
 // Definition for global stats
 GlobStat stats = {};
 
+void populate_struct(MagicNumber *mn_array);
+
 /**
  * read the config file
  *
@@ -105,23 +107,14 @@ int read_config_file(char* filename) {
  */
 void sort_signatures(MagicNumber* mn_array){
 
-    // First of all, trim the signatures to first 4 bytes
-    for (int i=0;i<SIGNATURES_VECTOR_LENGTH;i++) {
-        char* n = mn_array[i].number;
-        int size = 8;
-        if (strlen(n) <size)
-            size = strlen(n);
-
-        mn_array[i].number8 = malloc((size + 1) * sizeof(char));
-        strncpy(mn_array[i].number8, mn_array[i].number, size * sizeof(char) );
-        mn_array[i].number8[size]=0;
-    }
+    // First of all, trim the signatures to first 4 bytes and converts in unsigned long
+    populate_struct(mn_array);
 
     int min;
     for(int i=0; i<SIGNATURES_VECTOR_LENGTH; i++){
         min=i;
         for (int j = i+1;j < SIGNATURES_VECTOR_LENGTH; j++){
-            if (strtol(mn_array[j].number8, NULL, 16) < strtol(mn_array[min].number8, NULL, 16))
+            if (mn_array[j].number8_ul < mn_array[min].number8_ul)
                 min=j;
         }
 
@@ -135,8 +128,29 @@ void sort_signatures(MagicNumber* mn_array){
         printf("\n************************************************\n");
         printf("Signatures table print\n");
         for (int i = 0; i < SIGNATURES_VECTOR_LENGTH; ++i) {
-            printf("%s-%s-%s\n", mn_array[i].number8, mn_array[i].number, mn_array[i].types);
+            printf("n8_s: %s\t\t\tn8_ul: %lu\t\t-n_s: %s\t\t-types: qwwqqq%s\n", mn_array[i].number8_s, mn_array[i].number8_ul, mn_array[i].number_s, mn_array[i].types);
         }
         printf("\n************************************************\n");
+    }
+}
+
+/**
+ * Populates the struct with other attrs
+ *
+ * @param mn_array
+ */
+void populate_struct(MagicNumber *mn_array) {
+    for (int i=0; i < SIGNATURES_VECTOR_LENGTH; i++) {
+        char* n = mn_array[i].number_s;
+        int size = 8;
+        if (strlen(n) <size)
+            size = strlen(n);
+
+        mn_array[i].number8_s = malloc((size + 1) * sizeof(char));
+        strncpy(mn_array[i].number8_s, mn_array[i].number_s, size * sizeof(char) );
+        mn_array[i].number8_s[size]=0;
+
+        // Converts in unsigned long
+        mn_array[i].number8_ul = strtoul(mn_array[i].number8_s, NULL, 16);
     }
 }

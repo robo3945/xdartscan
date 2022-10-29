@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
 {
     // TODO: costruire il file CSV con i risultati
     // TODO: prendere il puntamento del file di configurazione anche da riga di comando
-    // TODO: Binary search for the signatures check (magic number)
+    // TODO: Binary search for the signatures check (magic number_s)
     if (read_config_file("config.ini"))
         read_config_file("../config.ini");
 

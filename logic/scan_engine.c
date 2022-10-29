@@ -10,6 +10,14 @@
 
 static const int MAGIC_NUMBER_BYTE_SIZE = 4;
 
+bool has_magic_number_simple(const char *magic_number_string);
+
+bool has_magic_number_binary_search(unsigned long magic_number, int lower, int upper);
+
+bool _binary_search_iterative(unsigned long magic_number, int lower, int upper);
+
+bool _binary_search_recursive(unsigned long magic_number, int lower, int upper);
+
 MagicNumber well_known_magic_number[] = {
          {"41435344","[['*', 'AOL parameter|info files']]"}
         ,{"62706c697374","[['*', 'Binary property list (plist)']]"}
@@ -411,6 +419,7 @@ MagicNumber well_known_magic_number[] = {
 };
 
 
+
 /**
  * The main scan function
  *
@@ -439,7 +448,7 @@ void main_scan(char *root_path, bool verbose) {
     printf("\nNumber of files with low Entropy:                             %d", stats.num_files_with_low_entropy);
     printf("\nNumber of files with Well Known Magic Number:                 %d",
            stats.num_files_with_well_known_magic_number);
-    printf("\nNumber of files with zero size or less of magic number size:  %d",
+    printf("\nNumber of files with zero size or less of magic number_s size:  %d",
            stats.num_files_with_size_zero_or_less);
     printf("\nNumber of files with length < min_size:                       %d", stats.num_files_with_min_size);
 
@@ -448,7 +457,7 @@ void main_scan(char *root_path, bool verbose) {
 }
 
 /**
- * Read a binary file in memory with the magic number (first 4 bytes)
+ * Read a binary file in memory with the magic number_s (first 4 bytes)
  *
  * @param path
  * @param length_out
@@ -501,7 +510,7 @@ unsigned char *read_file_content(char *path, long *length_out, unsigned char *ma
                 return NULL;
             }
 
-            // Set the magic number
+            // Set the magic number_s
             if (*length_out >= MAGIC_NUMBER_BYTE_SIZE) {
                 memcpy(magic_number_out, buffer, MAGIC_NUMBER_BYTE_SIZE * sizeof(unsigned char));
             }
@@ -571,13 +580,8 @@ void scan_a_file(char *basePath, bool verbose) {
         sprintf(magic_number_string, "%02x%02x%02x%02x", magic_number[0], magic_number[1], magic_number[2],
                 magic_number[3]);
 
-        // TODO: introduce the binary search for the ordered set
-        for (int j = 0; j < SIGNATURES_VECTOR_LENGTH; j++)
-            if (strncmp(well_known_magic_number[j].number8, magic_number_string, strlen(magic_number_string)) == 0) {
-                magic_number_found = true;
-                break;
-            }
-
+        //magic_number_found = has_magic_number_simple(magic_number_string);
+        magic_number_found = has_magic_number_binary_search(strtoul(magic_number_string, NULL, 16), 0, SIGNATURES_VECTOR_LENGTH-1);
 
         if (!magic_number_found) {
             double H = calc_rand_idx(content, file_length);
@@ -599,4 +603,55 @@ void scan_a_file(char *basePath, bool verbose) {
         free(content);
     }
 }
+
+bool has_magic_number_simple(const char *magic_number_string) {
+    bool magic_number_found = false;
+    for (int j = 0; j < SIGNATURES_VECTOR_LENGTH; j++)
+        if (strncmp(well_known_magic_number[j].number8_s, magic_number_string, strlen(magic_number_string)) == 0) {
+            magic_number_found = true;
+            break;
+        }
+    return magic_number_found;
+}
+
+bool _binary_search_iterative(unsigned long magic_number, int lower, int upper) {
+    while (lower <= upper) {
+        int mid = (upper + lower) / 2;
+
+        if (well_known_magic_number[mid].number8_ul == magic_number)
+            return true;
+
+        if (well_known_magic_number[mid].number8_ul < magic_number)
+            lower = mid + 1;
+        else
+            upper = mid - 1;
+    }
+
+    return false;
+}
+
+bool _binary_search_recursive(unsigned long magic_number, int lower, int upper) {
+    if (lower <= upper)
+    {
+        int mid = (upper + lower) / 2;
+
+        if (magic_number == well_known_magic_number[mid].number8_ul)
+            return true;
+
+        if (magic_number > well_known_magic_number[mid].number8_ul)
+            return _binary_search_recursive(magic_number, mid + 1, upper);
+        else
+            return _binary_search_recursive(magic_number, lower, mid - 1);
+    }
+
+    return false;
+}
+
+bool has_magic_number_binary_search(unsigned long magic_number, int lower, int upper) {
+
+    //return _binary_search_recursive(magic_number, lower, upper);
+    return _binary_search_iterative(magic_number, lower, upper);
+
+}
+
 

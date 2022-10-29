@@ -4,6 +4,7 @@
 #include "headers/config_manager.h"
 #include "headers/config.h"
 #include "headers/file_signatures.h"
+#include "headers/random_test.h"
 
 
 void test_config_read();
@@ -19,7 +20,7 @@ int main(int argc, char *argv[])
 }
 
 void sort_signs() {
-    sort_signatures(well_known_magic_number);
+    sort_signatures(g_well_known_mn);
 }
 
 void test_config_read() {

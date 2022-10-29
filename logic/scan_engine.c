@@ -7,18 +7,19 @@
 #include "../headers/scan_engine.h"
 #include "../headers/config.h"
 #include "../headers/config_manager.h"
+#include "../headers/random_test.h"
 
 static const int MAGIC_NUMBER_BYTE_SIZE = 4;
 
 bool has_magic_number_simple(const char *magic_number_string);
+bool p_has_magic_number_binary_search(unsigned long magic_number, int lower, int upper);
+bool p_binary_search_iterative(unsigned long magic_number, int lower, int upper);
+bool p_binary_search_recursive(unsigned long magic_number, int lower, int upper);
 
-bool has_magic_number_binary_search(unsigned long magic_number, int lower, int upper);
+void p_scan_file(char *basePath, bool verbose);
+void p_scan_files(char *base_path, int indent, bool verbose);
 
-bool _binary_search_iterative(unsigned long magic_number, int lower, int upper);
-
-bool _binary_search_recursive(unsigned long magic_number, int lower, int upper);
-
-MagicNumber well_known_magic_number[] = {
+MagicNumber g_well_known_mn[] = {
          {"41435344","[['*', 'AOL parameter|info files']]"}
         ,{"62706c697374","[['*', 'Binary property list (plist)']]"}
         ,{"001400000102","[['*', 'BIOS details in RAM']]"}
@@ -431,10 +432,10 @@ void main_scan(char *root_path, bool verbose) {
     clock_gettime(CLOCK_REALTIME, &start);
 
     // prepare the Signatures
-    sort_signatures(well_known_magic_number);
+    sort_signatures(g_well_known_mn);
 
     printf(">>> %s", root_path);
-    scan_files_recursively(root_path, 2, verbose);
+    p_scan_files(root_path, 2, verbose);
     clock_gettime(CLOCK_REALTIME, &end);
 
     // time_spent = end - start
@@ -443,14 +444,14 @@ void main_scan(char *root_path, bool verbose) {
 
     printf("\n\n\n");
     printf("\n---------------------------- STATS ---------------------------- ");
-    printf("\nNumber of files scanned:                                      %d", stats.num_files);
-    printf("\nNumber of files with High Entropy:                            %d", stats.num_files_with_high_entropy);
-    printf("\nNumber of files with low Entropy:                             %d", stats.num_files_with_low_entropy);
+    printf("\nNumber of files scanned:                                      %d", g_stats.num_files);
+    printf("\nNumber of files with High Entropy:                            %d", g_stats.num_files_with_high_entropy);
+    printf("\nNumber of files with low Entropy:                             %d", g_stats.num_files_with_low_entropy);
     printf("\nNumber of files with Well Known Magic Number:                 %d",
-           stats.num_files_with_well_known_magic_number);
+           g_stats.num_files_with_well_known_magic_number);
     printf("\nNumber of files with zero size or less of magic number_s size:  %d",
-           stats.num_files_with_size_zero_or_less);
-    printf("\nNumber of files with length < min_size:                       %d", stats.num_files_with_min_size);
+           g_stats.num_files_with_size_zero_or_less);
+    printf("\nNumber of files with length < min_size:                       %d", g_stats.num_files_with_min_size);
 
     printf("\nTime elpased is %f seconds", time_spent);
     printf("\n---------------------------- ***** ---------------------------- ");
@@ -480,13 +481,13 @@ unsigned char *read_file_content(char *path, long *length_out, unsigned char *ma
             }
 
             if (*length_out < MAGIC_NUMBER_BYTE_SIZE) {
-                stats.num_files_with_size_zero_or_less++;
+                g_stats.num_files_with_size_zero_or_less++;
                 fclose(fp);
                 return NULL;
             }
 
             if (*length_out>=MAGIC_NUMBER_BYTE_SIZE && *length_out < MIN_FILE_SIZE) {
-                stats.num_files_with_min_size++;
+                g_stats.num_files_with_min_size++;
                 fclose(fp);
                 return NULL;
             }
@@ -531,15 +532,15 @@ unsigned char *read_file_content(char *path, long *length_out, unsigned char *ma
  * @param indent
  * @param verbose
  */
-void scan_files_recursively(char *base_path, int indent, bool verbose) {
+void p_scan_files(char *base_path, int indent, bool verbose) {
     int i;
     char path[MAX_PATH_BUFFER];
     struct dirent *dp;
     DIR *dir = opendir(base_path);
 
     if (dir == NULL) {
-        stats.num_files++;
-        scan_a_file(base_path, verbose);
+        g_stats.num_files++;
+        p_scan_file(base_path, verbose);
         return;
     }
 
@@ -555,7 +556,7 @@ void scan_files_recursively(char *base_path, int indent, bool verbose) {
 
             printf("%c%c %s ", '|', '-', dp->d_name);
 
-            scan_files_recursively(path, indent + 2, verbose);
+            p_scan_files(path, indent + 2, verbose);
         }
     }
 
@@ -568,7 +569,7 @@ void scan_files_recursively(char *base_path, int indent, bool verbose) {
  * @param basePath
  * @param verbose
  */
-void scan_a_file(char *basePath, bool verbose) {
+void p_scan_file(char *basePath, bool verbose) {
     long file_length = -1;
     unsigned char magic_number[MAGIC_NUMBER_BYTE_SIZE];
 
@@ -581,22 +582,23 @@ void scan_a_file(char *basePath, bool verbose) {
                 magic_number[3]);
 
         //magic_number_found = has_magic_number_simple(magic_number_string);
-        magic_number_found = has_magic_number_binary_search(strtoul(magic_number_string, NULL, 16), 0, SIGNATURES_VECTOR_LENGTH-1);
+        magic_number_found = p_has_magic_number_binary_search(strtoul(magic_number_string, NULL, 16), 0,
+                                                              SIGNATURES_VECTOR_LENGTH - 1);
 
         if (!magic_number_found) {
             double H = calc_rand_idx(content, file_length);
             if (H > ENTROPY_TH) {
-                stats.num_files_with_high_entropy++;
+                g_stats.num_files_with_high_entropy++;
                 printf("(>>> H: %f)", H);
             } else {
                 printf("(low entropy H: %f)", H);
-                stats.num_files_with_low_entropy++;
+                g_stats.num_files_with_low_entropy++;
             }
         } else {
             if (verbose)
                 printf("(magic found: %s)", magic_number_string);
 
-            stats.num_files_with_well_known_magic_number++;
+            g_stats.num_files_with_well_known_magic_number++;
         }
 
 
@@ -607,21 +609,21 @@ void scan_a_file(char *basePath, bool verbose) {
 bool has_magic_number_simple(const char *magic_number_string) {
     bool magic_number_found = false;
     for (int j = 0; j < SIGNATURES_VECTOR_LENGTH; j++)
-        if (strncmp(well_known_magic_number[j].number8_s, magic_number_string, strlen(magic_number_string)) == 0) {
+        if (strncmp(g_well_known_mn[j].number8_s, magic_number_string, strlen(magic_number_string)) == 0) {
             magic_number_found = true;
             break;
         }
     return magic_number_found;
 }
 
-bool _binary_search_iterative(unsigned long magic_number, int lower, int upper) {
+bool p_binary_search_iterative(unsigned long magic_number, int lower, int upper) {
     while (lower <= upper) {
         int mid = (upper + lower) / 2;
 
-        if (well_known_magic_number[mid].number8_ul == magic_number)
+        if (g_well_known_mn[mid].number8_ul == magic_number)
             return true;
 
-        if (well_known_magic_number[mid].number8_ul < magic_number)
+        if (g_well_known_mn[mid].number8_ul < magic_number)
             lower = mid + 1;
         else
             upper = mid - 1;
@@ -630,27 +632,27 @@ bool _binary_search_iterative(unsigned long magic_number, int lower, int upper) 
     return false;
 }
 
-bool _binary_search_recursive(unsigned long magic_number, int lower, int upper) {
+bool p_binary_search_recursive(unsigned long magic_number, int lower, int upper) {
     if (lower <= upper)
     {
         int mid = (upper + lower) / 2;
 
-        if (magic_number == well_known_magic_number[mid].number8_ul)
+        if (magic_number == g_well_known_mn[mid].number8_ul)
             return true;
 
-        if (magic_number > well_known_magic_number[mid].number8_ul)
-            return _binary_search_recursive(magic_number, mid + 1, upper);
+        if (magic_number > g_well_known_mn[mid].number8_ul)
+            return p_binary_search_recursive(magic_number, mid + 1, upper);
         else
-            return _binary_search_recursive(magic_number, lower, mid - 1);
+            return p_binary_search_recursive(magic_number, lower, mid - 1);
     }
 
     return false;
 }
 
-bool has_magic_number_binary_search(unsigned long magic_number, int lower, int upper) {
+bool p_has_magic_number_binary_search(unsigned long magic_number, int lower, int upper) {
 
-    //return _binary_search_recursive(magic_number, lower, upper);
-    return _binary_search_iterative(magic_number, lower, upper);
+    //return p_binary_search_recursive(magic_number, lower, upper);
+    return p_binary_search_iterative(magic_number, lower, upper);
 
 }
 

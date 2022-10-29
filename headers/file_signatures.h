@@ -9,7 +9,7 @@ typedef struct MN
     unsigned long number8_ul; // number as unsigned long
 } MagicNumber;
 
-extern MagicNumber well_known_magic_number[];
+extern MagicNumber g_well_known_mn[];
 
 #define SIGNATURES_VECTOR_LENGTH 397
 

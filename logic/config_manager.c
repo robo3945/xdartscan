@@ -15,10 +15,10 @@ int DEBUG_PRINT=1;
 int MIN_FILE_SIZE=500; //bytes
 int MAX_FILE_SIZE=10000000; //bytes
 
-// Definition for global stats
-GlobStat stats = {};
+// Definition for global g_stats
+GlobStat g_stats = {};
 
-void populate_struct(MagicNumber *mn_array);
+void p_populate_struct(MagicNumber *mn_array);
 
 /**
  * read the config file
@@ -55,15 +55,15 @@ int read_config_file(char* filename) {
                                 printf("Config param: %s value: %f\n","ENTROPY_TH",ENTROPY_TH);
                             }
                             else if (strncmp(param_name, "DEBUG_PRINT", CONFIG_MAXPARAM - 1) == 0) {
-                                DEBUG_PRINT = strtol(param_value, NULL, 10);
+                                DEBUG_PRINT = (int) strtol(param_value, NULL, 10);
                                 printf("Config param: %s value: %d\n","DEBUG_PRINT",DEBUG_PRINT);
                             }
                             else if (strncmp(param_name, "MIN_FILE_SIZE", MIN_FILE_SIZE - 1) == 0) {
-                                MIN_FILE_SIZE = strtol(param_value, NULL, 10);
+                                MIN_FILE_SIZE = (int) strtol(param_value, NULL, 10);
                                 printf("Config param: %s value: %d\n","MIN_FILE_SIZE",MIN_FILE_SIZE);
                             }
                             else if (strncmp(param_name, "MAX_FILE_SIZE", MAX_FILE_SIZE - 1) == 0) {
-                                MAX_FILE_SIZE = strtol(param_value, NULL, 10);
+                                MAX_FILE_SIZE = (int) strtol(param_value, NULL, 10);
                                 printf("Config param: %s value: %d\n","MAX_FILE_SIZE",MAX_FILE_SIZE);
                             }
 
@@ -108,7 +108,7 @@ int read_config_file(char* filename) {
 void sort_signatures(MagicNumber* mn_array){
 
     // First of all, trim the signatures to first 4 bytes and converts in unsigned long
-    populate_struct(mn_array);
+    p_populate_struct(mn_array);
 
     int min;
     for(int i=0; i<SIGNATURES_VECTOR_LENGTH; i++){
@@ -139,12 +139,12 @@ void sort_signatures(MagicNumber* mn_array){
  *
  * @param mn_array
  */
-void populate_struct(MagicNumber *mn_array) {
+void p_populate_struct(MagicNumber *mn_array) {
     for (int i=0; i < SIGNATURES_VECTOR_LENGTH; i++) {
         char* n = mn_array[i].number_s;
         int size = 8;
         if (strlen(n) <size)
-            size = strlen(n);
+            size = (int) strlen(n);
 
         mn_array[i].number8_s = malloc((size + 1) * sizeof(char));
         strncpy(mn_array[i].number8_s, mn_array[i].number_s, size * sizeof(char) );

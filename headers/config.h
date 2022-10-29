@@ -15,7 +15,7 @@ typedef struct GlobalStatsStruct {
     int num_files_with_min_size;
 } GlobStat;
 
-extern GlobStat stats;
+extern GlobStat g_stats;
 
 #define BILLION  1000000000.0
 #define MAX_SET_SIZE 256

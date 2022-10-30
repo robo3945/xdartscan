@@ -8,6 +8,7 @@
 #include "../headers/config.h"
 #include "../headers/config_manager.h"
 #include "../headers/random_test.h"
+#include "../headers/report_manager.h"
 
 static const int MAGIC_NUMBER_BYTE_SIZE = 4;
 
@@ -434,8 +435,18 @@ void main_scan(char *root_path, bool verbose) {
     // prepare the Signatures
     sort_signatures(g_well_known_mn);
 
+    // creates the CSV file: open it
+    srand(time(NULL));
+    if (!create_report("./outcome"))
+        fprintf(stderr, "CSV file output problem\n");
+
+    // start the scanning
     printf(">>> %s", root_path);
     p_scan_files(root_path, 2, verbose);
+
+    // close the file
+    close_file();
+
     clock_gettime(CLOCK_REALTIME, &end);
 
     // time_spent = end - start
@@ -480,18 +491,14 @@ unsigned char *read_file_content(char *path, long *length_out, unsigned char *ma
                 return NULL;
             }
 
-            if (*length_out < MAGIC_NUMBER_BYTE_SIZE) {
-                g_stats.num_files_with_size_zero_or_less++;
+            // check the size limit
+            if ((*length_out>=0 && *length_out < MAGIC_NUMBER_BYTE_SIZE) ||
+                    (*length_out>=MAGIC_NUMBER_BYTE_SIZE && *length_out < MIN_FILE_SIZE)) {
                 fclose(fp);
                 return NULL;
             }
 
-            if (*length_out>=MAGIC_NUMBER_BYTE_SIZE && *length_out < MIN_FILE_SIZE) {
-                g_stats.num_files_with_min_size++;
-                fclose(fp);
-                return NULL;
-            }
-
+            // set the upper bound
             if (*length_out > MAX_FILE_SIZE)
                 *length_out = MAX_FILE_SIZE;
 
@@ -573,11 +580,17 @@ void p_scan_file(char *basePath, bool verbose) {
     long file_length = -1;
     unsigned char magic_number[MAGIC_NUMBER_BYTE_SIZE];
 
+    // flags
+    bool magic_number_found = false;
+    bool has_high_entropy = false;
+    bool has_size_zero_or_less = false;
+    bool has_min_size = false;
+    double H=-1;
+
     unsigned char *content = read_file_content(basePath, &file_length, magic_number);
     if (content != NULL) {
-        bool magic_number_found = false;
-        char magic_number_string[MAGIC_NUMBER_BYTE_SIZE * 2 + 1];
 
+        char magic_number_string[MAGIC_NUMBER_BYTE_SIZE * 2 + 1];
         sprintf(magic_number_string, "%02x%02x%02x%02x", magic_number[0], magic_number[1], magic_number[2],
                 magic_number[3]);
 
@@ -586,9 +599,10 @@ void p_scan_file(char *basePath, bool verbose) {
                                                               SIGNATURES_VECTOR_LENGTH - 1);
 
         if (!magic_number_found) {
-            double H = calc_rand_idx(content, file_length);
+            H = calc_rand_idx(content, file_length);
             if (H > ENTROPY_TH) {
                 g_stats.num_files_with_high_entropy++;
+                has_high_entropy = true;
                 printf("(>>> H: %f)", H);
             } else {
                 printf("(low entropy H: %f)", H);
@@ -597,13 +611,33 @@ void p_scan_file(char *basePath, bool verbose) {
         } else {
             if (verbose)
                 printf("(magic found: %s)", magic_number_string);
-
             g_stats.num_files_with_well_known_magic_number++;
         }
 
 
         free(content);
     }
+    else // some problem in the content
+    {
+        if (file_length>=0 && file_length < MAGIC_NUMBER_BYTE_SIZE) {
+            g_stats.num_files_with_size_zero_or_less++;
+            has_size_zero_or_less = true;
+        }
+        else if (file_length>=MAGIC_NUMBER_BYTE_SIZE && file_length < MIN_FILE_SIZE) {
+            g_stats.num_files_with_min_size++;
+            has_min_size = true;
+        }
+    }
+
+    // Append the line in the CSV file
+    char buf[MAX_PATH_BUFFER];
+    sprintf(buf, "%s\t%f\t%d\t%d\t%d\t%d\n", basePath,
+            H,
+            magic_number_found,
+            has_high_entropy,
+            has_size_zero_or_less,
+            has_min_size);
+    append_to_report(buf);
 }
 
 bool has_magic_number_simple(const char *magic_number_string) {

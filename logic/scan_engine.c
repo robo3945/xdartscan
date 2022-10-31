@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <time.h>
+#include <sys/stat.h>
 #include "../headers/scan_engine.h"
 #include "../headers/config.h"
 #include "../headers/config_manager.h"
@@ -629,14 +630,24 @@ void p_scan_file(char *basePath, bool verbose) {
         }
     }
 
+    // take the access, creation and modification file timestamp
+    struct stat attr;
+    stat(basePath, &attr);
+    char* mtime_s = strtok(ctime(&attr.st_mtime),"\n");
+    char* ctime_s = strtok(ctime(&attr.st_ctime),"\n");
+    char* atime_s = strtok(ctime(&attr.st_atime),"\n");
+
     // Append the line in the CSV file
     char buf[MAX_PATH_BUFFER];
-    sprintf(buf, "%s\t%f\t%d\t%d\t%d\t%d\n", basePath,
+    sprintf(buf, "%s\t%f\t%d\t%d\t%d\t%d\t%s\t%s\t%s\n", basePath,
             H,
             magic_number_found,
             has_high_entropy,
             has_size_zero_or_less,
-            has_min_size);
+            has_min_size,
+            ctime_s,
+            atime_s,
+            mtime_s);
     append_to_report(buf);
 }
 

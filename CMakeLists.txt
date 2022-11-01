@@ -18,4 +18,15 @@ add_executable(xdartscan
         logic/report_manager.c
         headers/report_manager.h
         headers/random_test.h)
-add_executable(xdartscan_test main_test.c logic/scan_engine.c headers/scan_engine.h logic/random_test.c headers/config.h logic/config_manager.c headers/config_manager.h misc/utils.c headers/utils.h logic/report_manager.c headers/report_manager.h headers/random_test.h)
+add_executable(xdartscan_test
+        main_test.c
+        logic/scan_engine.c
+        headers/scan_engine.h
+        logic/random_test.c
+        headers/config.h
+        logic/config_manager.c
+        headers/config_manager.h
+        misc/utils.c headers/utils.h
+        logic/report_manager.c
+        headers/report_manager.h
+        headers/random_test.h)

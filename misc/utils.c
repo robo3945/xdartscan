@@ -1,8 +1,5 @@
 #include "../headers/utils.h"
-#include "../headers/config.h"
-#include "../headers/config_manager.h"
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 

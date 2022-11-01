@@ -5,14 +5,11 @@
 #include "headers/scan_engine.h"
 #include "headers/config_manager.h"
 
-void print_help(char* idir);
+void print_help(char* param);
 
 int main(int argc, char *argv[])
 {
     // TODO: prendere il puntamento del file di configurazione anche da riga di comando
-    // TODO: add timestamp for file
-    if (read_config_file("config.ini"))
-        read_config_file("../config.ini");
 
     int opt;
     bool verbose = false;
@@ -37,14 +34,21 @@ int main(int argc, char *argv[])
     else
         print_help(argv[0]);
 
-    if (input_dir!=NULL)
+    if (input_dir!=NULL) {
+        if (read_config_file("config.ini", verbose))
+            read_config_file("../config.ini", verbose);
+
         main_scan(input_dir, verbose);
+    }
+    else {
+        print_help(argv[0]);
+    }
 
 }
 
-void print_help(char *idir) {
+void print_help(char *param) {
     fprintf(stdout, "XDartScan v. 1.0b\n");
-    fprintf(stdout, "Usage: %s [-i] [dir_to_scan] [-x]\n", idir);
+    fprintf(stdout, "Usage: %s [-i] [dir_to_scan] [-v]\n", param);
     exit(EXIT_SUCCESS);
 }
 

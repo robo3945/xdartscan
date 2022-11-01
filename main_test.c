@@ -24,8 +24,8 @@ void sort_signs() {
 }
 
 void test_config_read() {
-    if (read_config_file("config.ini"))
-        read_config_file("../config.ini");
+    if (read_config_file("config.ini", true))
+        read_config_file("../config.ini", true);
     printf("Entropy is: %f, Debug is: %d", ENTROPY_TH, DEBUG_PRINT);
 }
 

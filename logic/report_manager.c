@@ -9,12 +9,12 @@ void p_create_header();
 
 static FILE *fp = NULL;
 
-bool create_report(char* full_path){
+bool create_report(char* full_path, bool verbose){
     char path[MAX_PATH_BUFFER];
     sprintf(path, "%s%d.tsv", full_path, rand());
 
     if ((fp = fopen(path, "a")) != NULL) {
-        printf("TSV file created: %s\n\n",path );
+        (verbose)?printf("TSV file created: %s\n\n",path ):0;
         p_create_header();
         return true;
     }

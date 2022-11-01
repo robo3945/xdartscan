@@ -438,11 +438,11 @@ void main_scan(char *root_path, bool verbose) {
 
     // creates the CSV file: open it
     srand(time(NULL));
-    if (!create_report("./outcome"))
+    if (!create_report("./outcome", verbose))
         fprintf(stderr, "CSV file output problem\n");
 
     // start the scanning
-    printf(">>> %s", root_path);
+    (verbose)?printf(">>> %s", root_path):0;
     p_scan_files(root_path, 2, verbose);
 
     // close the file
@@ -454,19 +454,23 @@ void main_scan(char *root_path, bool verbose) {
     double time_spent = (end.tv_sec - start.tv_sec) +
                         (end.tv_nsec - start.tv_nsec) / BILLION;
 
-    printf("\n\n\n");
-    printf("\n---------------------------- STATS ---------------------------- ");
-    printf("\nNumber of files scanned:                                      %d", g_stats.num_files);
-    printf("\nNumber of files with High Entropy:                            %d", g_stats.num_files_with_high_entropy);
-    printf("\nNumber of files with low Entropy:                             %d", g_stats.num_files_with_low_entropy);
-    printf("\nNumber of files with Well Known Magic Number:                 %d",
-           g_stats.num_files_with_well_known_magic_number);
-    printf("\nNumber of files with zero size or less of magic number_s size:  %d",
-           g_stats.num_files_with_size_zero_or_less);
-    printf("\nNumber of files with length < min_size:                       %d", g_stats.num_files_with_min_size);
+    if (verbose) {
+        printf("\n\n\n");
+        printf("\n---------------------------- STATS ---------------------------- ");
+        printf("\nNumber of files scanned:                                      %d", g_stats.num_files);
+        printf("\nNumber of files with High Entropy:                            %d",
+               g_stats.num_files_with_high_entropy);
+        printf("\nNumber of files with low Entropy:                             %d",
+               g_stats.num_files_with_low_entropy);
+        printf("\nNumber of files with Well Known Magic Number:                 %d",
+               g_stats.num_files_with_well_known_magic_number);
+        printf("\nNumber of files with zero size or less of magic number_s size:  %d",
+               g_stats.num_files_with_size_zero_or_less);
+        printf("\nNumber of files with length < min_size:                       %d", g_stats.num_files_with_min_size);
 
-    printf("\nTime elpased is %f seconds", time_spent);
-    printf("\n---------------------------- ***** ---------------------------- ");
+        printf("\nTime elpased is %f seconds", time_spent);
+        printf("\n---------------------------- ***** ---------------------------- ");
+    }
 }
 
 /**
@@ -554,15 +558,17 @@ void p_scan_files(char *base_path, int indent, bool verbose) {
 
     while ((dp = readdir(dir)) != NULL) {
         if (strcmp(dp->d_name, ".") != 0 && strcmp(dp->d_name, "..") != 0) {
-            printf("\n");
-            for (i = 0; i < indent; i++)
-                printf(" ");
+            if (verbose) {
+                printf("\n");
+                for (i = 0; i < indent; i++)
+                    printf(" ");
+            }
 
             strcpy(path, base_path);
             strcat(path, "/");
             strcat(path, dp->d_name);
 
-            printf("%c%c %s ", '|', '-', dp->d_name);
+            (verbose)?printf("%c%c %s ", '|', '-', dp->d_name):0;
 
             p_scan_files(path, indent + 2, verbose);
         }
@@ -604,17 +610,15 @@ void p_scan_file(char *basePath, bool verbose) {
             if (H > ENTROPY_TH) {
                 g_stats.num_files_with_high_entropy++;
                 has_high_entropy = true;
-                printf("(>>> H: %f)", H);
+                (verbose)?printf("(>>> H: %f)", H):0;
             } else {
-                printf("(low entropy H: %f)", H);
+                (verbose)?printf("(low entropy H: %f)", H):0;
                 g_stats.num_files_with_low_entropy++;
             }
         } else {
-            if (verbose)
-                printf("(magic found: %s)", magic_number_string);
+            (verbose)?printf("(magic found: %s)", magic_number_string):0;
             g_stats.num_files_with_well_known_magic_number++;
         }
-
 
         free(content);
     }

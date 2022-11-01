@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
+#include <stdbool.h>
 #include "../headers/file_signatures.h"
 #include "../headers/config_manager.h"
 #include "../headers/config.h"
@@ -26,12 +27,12 @@ void p_populate_struct(MagicNumber *mn_array);
  * @param filename
  * @return 0 if file was read 1 otherwise
  */
-int read_config_file(char* filename) {
+int read_config_file(char* filename, bool verbose) {
     FILE *fp;
     char line[CONFIG_MAXLINE];
 
     if ((fp = fopen(filename, "r")) != NULL) {
-        printf("\n---------------------------- CONFIG ---------------------------- \n");
+        (verbose)?printf("\n---------------------------- CONFIG ---------------------------- \n"):0;
         while (!feof(fp)) {
             fgets(line, CONFIG_MAXLINE, fp);
 
@@ -52,22 +53,20 @@ int read_config_file(char* filename) {
                             param_value = trim(token);
                             if (strncmp(param_name, "ENTROPY_TH", CONFIG_MAXPARAM - 1) == 0) {
                                 ENTROPY_TH = strtod(param_value, NULL);
-                                printf("Config param: %s value: %f\n","ENTROPY_TH",ENTROPY_TH);
+                                (verbose)?printf("Config param: %s value: %f\n","ENTROPY_TH",ENTROPY_TH):0;
                             }
                             else if (strncmp(param_name, "DEBUG_PRINT", CONFIG_MAXPARAM - 1) == 0) {
                                 DEBUG_PRINT = (int) strtol(param_value, NULL, 10);
-                                printf("Config param: %s value: %d\n","DEBUG_PRINT",DEBUG_PRINT);
+                                (verbose)?printf("Config param: %s value: %d\n","DEBUG_PRINT",DEBUG_PRINT):0;
                             }
                             else if (strncmp(param_name, "MIN_FILE_SIZE", MIN_FILE_SIZE - 1) == 0) {
                                 MIN_FILE_SIZE = (int) strtol(param_value, NULL, 10);
-                                printf("Config param: %s value: %d\n","MIN_FILE_SIZE",MIN_FILE_SIZE);
+                                (verbose)?printf("Config param: %s value: %d\n","MIN_FILE_SIZE",MIN_FILE_SIZE):0;
                             }
                             else if (strncmp(param_name, "MAX_FILE_SIZE", MAX_FILE_SIZE - 1) == 0) {
                                 MAX_FILE_SIZE = (int) strtol(param_value, NULL, 10);
-                                printf("Config param: %s value: %d\n","MAX_FILE_SIZE",MAX_FILE_SIZE);
+                                (verbose)?printf("Config param: %s value: %d\n","MAX_FILE_SIZE",MAX_FILE_SIZE):0;
                             }
-
-
 
                         }
                         else
@@ -90,8 +89,10 @@ int read_config_file(char* filename) {
                 free(param_value);
 
         }
-        printf("Configuration file correctly read, path: \"%s\"\n", filename);
-        printf("\n---------------------------- ///// ---------------------------- \n");
+        if (verbose) {
+            printf("Configuration file correctly read, path: \"%s\"\n", filename);
+            printf("\n---------------------------- ///// ---------------------------- \n");
+        }
 
     } else
         return 1;

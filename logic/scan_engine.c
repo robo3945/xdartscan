@@ -13,7 +13,6 @@
 
 static const int MAGIC_NUMBER_BYTE_SIZE = 4;
 
-bool has_magic_number_simple(const char *magic_number_string);
 bool p_has_magic_number_binary_search(unsigned long magic_number, int lower, int upper);
 bool p_binary_search_iterative(unsigned long magic_number, int lower, int upper);
 bool p_binary_search_recursive(unsigned long magic_number, int lower, int upper);

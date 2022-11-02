@@ -129,7 +129,7 @@ void sort_signatures(MagicNumber* mn_array){
         printf("\n************************************************\n");
         printf("Signatures table print\n");
         for (int i = 0; i < SIGNATURES_VECTOR_LENGTH; ++i) {
-            printf("n8_s: %s\t\t\tn8_ul: %lu\t\t-n_s: %s\t\t-types: qwwqqq%s\n", mn_array[i].number8_s, mn_array[i].number8_ul, mn_array[i].number_s, mn_array[i].types);
+            printf("n8_s: %s\t\t\tn8_ul: %lu\t\t-n_s: %s\t\t-types: %s\n", mn_array[i].number8_s, mn_array[i].number8_ul, mn_array[i].number_s, mn_array[i].types);
         }
         printf("\n************************************************\n");
     }

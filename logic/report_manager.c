@@ -14,7 +14,7 @@ bool create_report(char* full_path, bool verbose){
     sprintf(path, "%s%d.tsv", full_path, rand());
 
     if ((fp = fopen(path, "a")) != NULL) {
-        (verbose)?printf("TSV file created: %s\n\n",path ):0;
+        (verbose)?printf("\nTSV file created: %s\n\n",path ):0;
         p_create_header();
         return true;
     }

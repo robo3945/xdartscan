@@ -9,19 +9,21 @@ void print_help(char* param);
 
 int main(int argc, char *argv[])
 {
-    // TODO: prendere il puntamento del file di configurazione anche da riga di comando
-
     int opt;
     bool verbose = false;
     char* input_dir = NULL;
+    char* config_dir = NULL;
     if (argc >1)
-        while ((opt = getopt(argc, argv, "hvi:")) != -1) {
+        while ((opt = getopt(argc, argv, "hvi:c:")) != -1) {
             switch (opt) {
                 case 'v':
                     verbose = true;
                     continue;
                 case 'i':
                     input_dir = optarg;
+                    continue;
+                case 'c':
+                    config_dir = optarg;
                     continue;
                 case 'h':
                     print_help(argv[0]);
@@ -35,8 +37,12 @@ int main(int argc, char *argv[])
         print_help(argv[0]);
 
     if (input_dir!=NULL) {
-        if (read_config_file("config.ini", verbose))
-            read_config_file("../config.ini", verbose);
+        if (config_dir == NULL) {
+            if (read_config_file("config.ini", verbose))
+                read_config_file("../config.ini", verbose);
+        }
+        else
+            read_config_file(config_dir, verbose);
 
         main_scan(input_dir, verbose);
     }
@@ -48,7 +54,7 @@ int main(int argc, char *argv[])
 
 void print_help(char *param) {
     fprintf(stdout, "XDartScan v. 1.0b\n");
-    fprintf(stdout, "Usage: %s [-i] [dir_to_scan] [-v]\n", param);
+    fprintf(stdout, "Usage: %s -i <dir_to_scan> -c <config_file_path>\n", param);
     exit(EXIT_SUCCESS);
 }
 

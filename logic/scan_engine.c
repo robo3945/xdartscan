@@ -13,9 +13,7 @@
 
 static const int MAGIC_NUMBER_BYTE_SIZE = 4;
 
-bool p_has_magic_number_binary_search(unsigned long magic_number, int lower, int upper);
-bool p_binary_search_iterative(unsigned long magic_number, int lower, int upper);
-bool p_binary_search_recursive(unsigned long magic_number, int lower, int upper);
+bool p_binary_search(unsigned long magic_number, int lower, int upper);
 
 void p_scan_file(char *basePath, bool verbose);
 void p_scan_files(char *base_path, int indent, bool verbose);
@@ -441,7 +439,7 @@ void main_scan(char *root_path, bool verbose) {
         fprintf(stderr, "CSV file output problem\n");
 
     // start the scanning
-    (verbose)?printf(">>> %s", root_path):0;
+    (verbose)?printf("+ %s", root_path):0;
     p_scan_files(root_path, 2, verbose);
 
     // close the file
@@ -601,7 +599,7 @@ void p_scan_file(char *basePath, bool verbose) {
                 magic_number[3]);
 
         //magic_number_found = has_magic_number_simple(magic_number_string);
-        magic_number_found = p_has_magic_number_binary_search(strtoul(magic_number_string, NULL, 16), 0,
+        magic_number_found = p_binary_search(strtoul(magic_number_string, NULL, 16), 0,
                                                               SIGNATURES_VECTOR_LENGTH - 1);
 
         if (!magic_number_found) {
@@ -609,9 +607,9 @@ void p_scan_file(char *basePath, bool verbose) {
             if (H > ENTROPY_TH) {
                 g_stats.num_files_with_high_entropy++;
                 has_high_entropy = true;
-                (verbose)?printf("(>>> H: %f)", H):0;
+                (verbose)?printf("(high H: %f)", H):0;
             } else {
-                (verbose)?printf("(low entropy H: %f)", H):0;
+                (verbose)?printf("(low H: %f)", H):0;
                 g_stats.num_files_with_low_entropy++;
             }
         } else {
@@ -664,7 +662,7 @@ bool has_magic_number_simple(const char *magic_number_string) {
     return magic_number_found;
 }
 
-bool p_binary_search_iterative(unsigned long magic_number, int lower, int upper) {
+bool p_binary_search(unsigned long magic_number, int lower, int upper) {
     while (lower <= upper) {
         int mid = (upper + lower) / 2;
 
@@ -678,30 +676,6 @@ bool p_binary_search_iterative(unsigned long magic_number, int lower, int upper)
     }
 
     return false;
-}
-
-bool p_binary_search_recursive(unsigned long magic_number, int lower, int upper) {
-    if (lower <= upper)
-    {
-        int mid = (upper + lower) / 2;
-
-        if (magic_number == g_well_known_mn[mid].number8_ul)
-            return true;
-
-        if (magic_number > g_well_known_mn[mid].number8_ul)
-            return p_binary_search_recursive(magic_number, mid + 1, upper);
-        else
-            return p_binary_search_recursive(magic_number, lower, mid - 1);
-    }
-
-    return false;
-}
-
-bool p_has_magic_number_binary_search(unsigned long magic_number, int lower, int upper) {
-
-    //return p_binary_search_recursive(magic_number, lower, upper);
-    return p_binary_search_iterative(magic_number, lower, upper);
-
 }
 
 

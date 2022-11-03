@@ -32,7 +32,11 @@ int read_config_file(char* filename, bool verbose) {
     char line[CONFIG_MAXLINE];
 
     if ((fp = fopen(filename, "r")) != NULL) {
-        (verbose)?printf("\n---------------------------- CONFIG ---------------------------- \n"):0;
+        if (verbose) {
+            printf("\n---------------------------- CONFIG ---------------------------- \n");
+            printf("Config path: %s\n\n", filename);
+        }
+
         while (!feof(fp)) {
             fgets(line, CONFIG_MAXLINE, fp);
 
@@ -53,19 +57,19 @@ int read_config_file(char* filename, bool verbose) {
                             param_value = trim(token);
                             if (strncmp(param_name, "ENTROPY_TH", CONFIG_MAXPARAM - 1) == 0) {
                                 ENTROPY_TH = strtod(param_value, NULL);
-                                (verbose)?printf("Config param: %s value: %f\n","ENTROPY_TH",ENTROPY_TH):0;
+                                (verbose)?printf("Config param: %s value: \t\t%f\n","ENTROPY_TH",ENTROPY_TH):0;
                             }
                             else if (strncmp(param_name, "DEBUG_PRINT", CONFIG_MAXPARAM - 1) == 0) {
                                 DEBUG_PRINT = (int) strtol(param_value, NULL, 10);
-                                (verbose)?printf("Config param: %s value: %d\n","DEBUG_PRINT",DEBUG_PRINT):0;
+                                (verbose)?printf("Config param: %s value: \t\t%d\n","DEBUG_PRINT",DEBUG_PRINT):0;
                             }
                             else if (strncmp(param_name, "MIN_FILE_SIZE", MIN_FILE_SIZE - 1) == 0) {
                                 MIN_FILE_SIZE = (int) strtol(param_value, NULL, 10);
-                                (verbose)?printf("Config param: %s value: %d\n","MIN_FILE_SIZE",MIN_FILE_SIZE):0;
+                                (verbose)?printf("Config param: %s value: \t\t%d\n","MIN_FILE_SIZE",MIN_FILE_SIZE):0;
                             }
                             else if (strncmp(param_name, "MAX_FILE_SIZE", MAX_FILE_SIZE - 1) == 0) {
                                 MAX_FILE_SIZE = (int) strtol(param_value, NULL, 10);
-                                (verbose)?printf("Config param: %s value: %d\n","MAX_FILE_SIZE",MAX_FILE_SIZE):0;
+                                (verbose)?printf("Config param: %s value: \t\t%d\n","MAX_FILE_SIZE",MAX_FILE_SIZE):0;
                             }
 
                         }
@@ -89,13 +93,12 @@ int read_config_file(char* filename, bool verbose) {
                 free(param_value);
 
         }
-        if (verbose) {
-            printf("Configuration file correctly read, path: \"%s\"\n", filename);
-            printf("\n---------------------------- ///// ---------------------------- \n");
-        }
+        (verbose)? printf("---------------------------- ///// ---------------------------- \n"):0;
 
-    } else
+    } else {
+        fprintf(stderr, "Configuration file not found in path: \"%s\"\nUsing default configuration...", filename);
         return 1;
+    }
 
     return 0;
 }

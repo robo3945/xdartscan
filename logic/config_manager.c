@@ -96,7 +96,7 @@ int read_config_file(char* filename, bool verbose) {
         (verbose)? printf("---------------------------- ///// ---------------------------- \n"):0;
 
     } else {
-        fprintf(stderr, "Configuration file not found in path: \"%s\"\nUsing default configuration...", filename);
+        fprintf(stderr, "Configuration file not found in path: \"%s\"", filename);
         return 1;
     }
 

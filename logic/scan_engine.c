@@ -494,8 +494,7 @@ unsigned char *read_file_content(char *path, long *length_out, unsigned char *ma
             }
 
             // check the size limit
-            if ((*length_out>=0 && *length_out < MAGIC_NUMBER_BYTE_SIZE) ||
-                    (*length_out>=MAGIC_NUMBER_BYTE_SIZE && *length_out < MIN_FILE_SIZE)) {
+            if (*length_out < MIN_FILE_SIZE || *length_out<MAGIC_NUMBER_BYTE_SIZE) {
                 fclose(fp);
                 return NULL;
             }
@@ -621,15 +620,17 @@ void p_scan_file(char *basePath, bool verbose) {
     }
     else // some problem in the content
     {
-        if (file_length>=0 && file_length < MAGIC_NUMBER_BYTE_SIZE) {
+        if (file_length < MAGIC_NUMBER_BYTE_SIZE) {
             g_stats.num_files_with_size_zero_or_less++;
             has_size_zero_or_less = true;
         }
-        else if (file_length>=MAGIC_NUMBER_BYTE_SIZE && file_length < MIN_FILE_SIZE) {
+        else if (file_length < MIN_FILE_SIZE) {
             g_stats.num_files_with_min_size++;
             has_min_size = true;
         }
     }
+
+    (verbose)?printf(" - l: %ldb", file_length):0;
 
     // take the access, creation and modification file timestamp
     struct stat attr;

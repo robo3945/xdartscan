@@ -18,15 +18,18 @@ add_executable(xdartscan
         logic/report_manager.c
         headers/report_manager.h
         headers/random_test.h)
-add_executable(xdartscan_test
-        main_test.c
-        logic/scan_engine.c
-        headers/scan_engine.h
-        logic/random_test.c
-        headers/config.h
+
+add_executable(test_signatures
+        testing/test_signatures.c
         logic/config_manager.c
-        headers/config_manager.h
-        misc/utils.c headers/utils.h
+        logic/scan_engine.c
         logic/report_manager.c
-        headers/report_manager.h
-        headers/random_test.h)
+        logic/random_test.c
+        misc/utils.c
+        headers/file_signatures.h)
+
+# https://coderefinery.github.io/cmake-workshop/testing/
+# enable testing functionality
+enable_testing()
+
+add_test(NAME test_signatures COMMAND test_signatures)

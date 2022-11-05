@@ -39,10 +39,11 @@ int main(int argc, char *argv[])
     if (input_dir!=NULL) {
         if (config_dir == NULL) {
             if (read_config_file("config.ini", verbose))
-                read_config_file("../config.ini", verbose);
+                if (read_config_file("../config.ini", verbose))
+                    printf("Configuration file not found in path: \"%s\"", "../config.ini");
         }
-        else
-            read_config_file(config_dir, verbose);
+        else if (read_config_file(config_dir, verbose))
+            printf("Configuration file not found in path: \"%s\"", config_dir);
 
         main_scan(input_dir, verbose);
     }

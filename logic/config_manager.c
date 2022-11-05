@@ -32,10 +32,8 @@ int read_config_file(char* filename, bool verbose) {
     char line[CONFIG_MAXLINE];
 
     if ((fp = fopen(filename, "r")) != NULL) {
-        if (verbose) {
-            printf("\n---------------------------- CONFIG ---------------------------- \n");
-            printf("Config path: %s\n\n", filename);
-        }
+        printf("\n---------------------------- CONFIG ---------------------------- \n");
+        printf("Config path: %s\n\n", filename);
 
         while (!feof(fp)) {
             fgets(line, CONFIG_MAXLINE, fp);
@@ -93,10 +91,9 @@ int read_config_file(char* filename, bool verbose) {
                 free(param_value);
 
         }
-        (verbose)? printf("---------------------------- ///// ---------------------------- \n"):0;
+        printf("---------------------------- ///// ---------------------------- \n");
 
     } else {
-        fprintf(stderr, "Configuration file not found in path: \"%s\"", filename);
         return 1;
     }
 

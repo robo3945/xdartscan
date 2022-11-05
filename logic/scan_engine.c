@@ -649,12 +649,13 @@ void p_scan_file(char *basePath, bool verbose) {
     (verbose) ? printf(" - l: %ldb", file_length) : 0;
 
     // Append the line in the CSV file
-    sprintf(report_line_buffer, "%s\t%f\t%d\t%d\t%d\t%d\t%s\t%s\t%s\n", basePath,
+    sprintf(report_line_buffer, "%s\t%f\t%d\t%d\t%d\t%d\t%ld\t%s\t%s\t%s\n", basePath,
             H,
             magic_number_found,
             has_high_entropy,
             has_size_zero_or_less,
             has_min_size,
+            file_length,
             ctime_s,
             atime_s,
             mtime_s);

@@ -4,7 +4,7 @@ project(xdartscan C)
 set(CMAKE_C_STANDARD 99)
 
 # static link for mingw libraries
-set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static")
+# set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static")
 add_compile_options(-gdwarf-4)
 
 add_executable(xdartscan

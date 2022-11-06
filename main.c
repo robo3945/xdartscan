@@ -11,13 +11,17 @@ int main(int argc, char *argv[])
 {
     int opt;
     bool verbose = false;
+    bool not_close_terminal_window = false;
     char* input_dir = NULL;
     char* config_dir = NULL;
     if (argc >1)
-        while ((opt = getopt(argc, argv, "hvi:c:")) != -1) {
+        while ((opt = getopt(argc, argv, "hvxi:c:")) != -1) {
             switch (opt) {
                 case 'v':
                     verbose = true;
+                    continue;
+                case 'x':
+                    not_close_terminal_window = true;
                     continue;
                 case 'i':
                     input_dir = optarg;
@@ -46,6 +50,10 @@ int main(int argc, char *argv[])
             printf("Configuration file not found in path: \"%s\"", config_dir);
 
         main_scan(input_dir, verbose);
+        if (not_close_terminal_window) {
+            printf("\n\n\nPress RETURN to close...");
+            getc(stdin);
+        }
     }
     else {
         print_help(argv[0]);

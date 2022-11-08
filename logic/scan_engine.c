@@ -10,7 +10,6 @@
 #include "../headers/config_manager.h"
 #include "../headers/random_test.h"
 #include "../headers/report_manager.h"
-#include "../headers/utils.h"
 
 static const int MAGIC_NUMBER_BYTE_SIZE = 4;
 
@@ -589,58 +588,56 @@ void p_scan_file(char *basePath, bool verbose) {
         FILE *fp = fopen(basePath, "rb");
         //nt ferror_flags = fp->_flag & 0x0020;
         //if (fp && (ferror_flags == 0)) {
-        if (fp)
-        {
+        if (fp) {
 
-                if (file_length > MAX_FILE_SIZE)
-                    file_length = MAX_FILE_SIZE;
+            if (file_length > MAX_FILE_SIZE)
+                file_length = MAX_FILE_SIZE;
 
-                // read the magic number
-                unsigned char *magic_number_string = p_read_magic_number(fp);
-                char magic_number_hex_string[MAGIC_NUMBER_BYTE_SIZE * 2 + 1];
+            // read the magic number
+            unsigned char *magic_number_string = p_read_magic_number(fp);
+            char magic_number_hex_string[MAGIC_NUMBER_BYTE_SIZE * 2 + 1];
 
-                // search if it is a well knwon magic number
-                if (magic_number_string != NULL) {
-                    sprintf(magic_number_hex_string, "%02x%02x%02x%02x", magic_number_string[0], magic_number_string[1],
-                            magic_number_string[2],
-                            magic_number_string[3]);
-                    free(magic_number_string);
+            // search if it is a well knwon magic number
+            if (magic_number_string != NULL) {
+                sprintf(magic_number_hex_string, "%02x%02x%02x%02x", magic_number_string[0], magic_number_string[1],
+                        magic_number_string[2],
+                        magic_number_string[3]);
+                free(magic_number_string);
 
-                    //magic_number_found = has_magic_number_simple(magic_number_string);
-                    magic_number_found = p_binary_search(strtoul(magic_number_hex_string, NULL, 16), 0,
-                                                         SIGNATURES_VECTOR_LENGTH - 1);
+                //magic_number_found = has_magic_number_simple(magic_number_string);
+                magic_number_found = p_binary_search(strtoul(magic_number_hex_string, NULL, 16), 0,
+                                                     SIGNATURES_VECTOR_LENGTH - 1);
 
-                    if (magic_number_found) {
-                        (verbose) ? printf("(magic found: %s)", magic_number_hex_string) : 0;
-                        g_stats.num_files_with_well_known_magic_number++;
-                    } else {
-
-                        unsigned char *content = p_read_file_content(fp, basePath, file_length);
-                        if (file_length > MIN_FILE_SIZE && content != NULL) {
-                            H = calc_rand_idx(content, file_length);
-                            if (H > ENTROPY_TH) {
-                                g_stats.num_files_with_high_entropy++;
-                                has_high_entropy = true;
-                                (verbose) ? printf("(high H: %f)", H) : 0;
-                            } else {
-                                (verbose) ? printf("(low H: %f)", H) : 0;
-                                g_stats.num_files_with_low_entropy++;
-                            }
-
-                            free(content);
-                        }
-                    }
+                if (magic_number_found) {
+                    (verbose) ? printf("(magic found: %s)", magic_number_hex_string) : 0;
+                    g_stats.num_files_with_well_known_magic_number++;
                 } else {
-                    // some problem in catching the magic number string
-                    // TODO: put the information in the TSV
-                    fprintf(stderr, "\nMagic number string problem in: %s", basePath);
+
+                    unsigned char *content = p_read_file_content(fp, basePath, file_length);
+                    if (file_length > MIN_FILE_SIZE && content != NULL) {
+                        H = calc_rand_idx(content, file_length);
+                        if (H > ENTROPY_TH) {
+                            g_stats.num_files_with_high_entropy++;
+                            has_high_entropy = true;
+                            (verbose) ? printf("(high H: %f)", H) : 0;
+                        } else {
+                            (verbose) ? printf("(low H: %f)", H) : 0;
+                            g_stats.num_files_with_low_entropy++;
+                        }
+
+                        free(content);
+                    }
                 }
-                fclose(fp);
+            } else {
+                // some problem in catching the magic number string
+                // TODO: put the information in the TSV
+                fprintf(stderr, "\nMagic number string problem in: %s", basePath);
+            }
+            fclose(fp);
         } else {
-            // some problem opening the file
             // TODO: put the information in the TSV
             // TODO: catch the specific access problem
-            //char buffer [1024];
+            //char buffer [33];
             //itoa(ferror_flags,buffer,2);
             //fprintf(stderr, "\nCannot open the file: %s (mask bit err: %s)", basePath, buffer);
             fprintf(stderr, "\nCannot open the file: %s", basePath);

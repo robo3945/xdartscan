@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include <string.h>
 #include "../headers/report_manager.h"
 #include "../headers/scan_engine.h"
 

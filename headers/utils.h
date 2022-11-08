@@ -9,4 +9,6 @@
 
 char* trim(const char *src);
 
+char* itoa(int value, char* buffer, int base);
+
 #endif //XDARTSCAN_UTILS_H

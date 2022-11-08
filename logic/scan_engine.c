@@ -481,17 +481,10 @@ void main_scan(char *root_path, bool verbose) {
 unsigned char *p_read_file_content(FILE *fp, char *path, long length) {
 
     unsigned char *buffer = NULL;
-
     if (fseek(fp, 0, SEEK_SET) == 0) {
         buffer = (unsigned char *) malloc(length * sizeof(unsigned char));
         fread(buffer, sizeof(unsigned char), length, fp);
-        if (ferror(fp) != 0) {
-            fprintf(stderr, "File access problem: %s (%ld)", path, length);
-            free(buffer);
-            return NULL;
-        }
     }
-
     return buffer;
 }
 
@@ -593,7 +586,9 @@ void p_scan_file(char *basePath, bool verbose) {
     } else {
 
         FILE *fp = fopen(basePath, "rb");
-        if (fp) {
+        int ferror_flags = -1;
+        if (fp && ((ferror_flags = fp->_flag & 0x0020) == 0)) {
+        //if (fp) {
 
             if (file_length > MAX_FILE_SIZE)
                 file_length = MAX_FILE_SIZE;
@@ -635,15 +630,23 @@ void p_scan_file(char *basePath, bool verbose) {
                 }
             } else {
                 // some problem in catching the magic number string
-                fprintf(stderr, "\nMagic number string problem: %s", magic_number_string);
+                // TODO: put the information in the TSV
+                fprintf(stderr, "\nMagic number string problem in: %s", basePath);
             }
             fclose(fp);
-
         } else {
-            // some problem opening the file
-            fprintf(stderr, "\nFile access problem: %s", basePath);
-        }
+            // TODO: put the information in the TSV
+            // TODO: catch the specific access problem
 
+            if (!fp)
+                fprintf(stderr, "\nCannot open the file: %s (file handler is null)", basePath);
+            else {
+                char buffer[33];
+                itoa(ferror_flags, buffer, 2);
+                fprintf(stderr, "\nCannot open the file: %s (mask bit err: %s)", basePath, buffer);
+            }
+
+        }
     }
 
     (verbose) ? printf(" - l: %ldb", file_length) : 0;

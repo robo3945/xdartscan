@@ -465,6 +465,7 @@ void main_scan(char *root_path, bool verbose) {
     printf("\nNumber of files with zero size or less of magic number_s size:  %d",
            g_stats.num_files_with_size_zero_or_less);
     printf("\nNumber of files with length < min_size:                       %d", g_stats.num_files_with_min_size);
+    printf("\nNumber of files with ERRS:                       %d", g_stats.num_files_with_errs);
 
     printf("\nTime elpased is %f seconds", time_spent);
     printf("\n---------------------------- ***** ---------------------------- ");
@@ -562,6 +563,8 @@ void p_scan_file(char *basePath, bool verbose) {
     bool has_high_entropy = false;
     bool has_size_zero_or_less = false;
     bool has_min_size = false;
+    bool has_errs = false;
+    char err_description[MAX_PATH_BUFFER+256];
     double H = -1;
     char report_line_buffer[MAX_PATH_BUFFER];
 
@@ -631,19 +634,30 @@ void p_scan_file(char *basePath, bool verbose) {
             } else {
                 // some problem in catching the magic number string
                 // TODO: put the information in the TSV
-                fprintf(stderr, "\nMagic number string problem in: %s", basePath);
+
+                has_errs = true;
+                g_stats.num_files_with_errs++;
+                sprintf(err_description, "\nMagic number string problem in: %s", basePath);
+                fprintf(stderr, "%s",err_description);
+
             }
             fclose(fp);
         } else {
             // TODO: put the information in the TSV
             // TODO: catch the specific access problem
 
-            if (!fp)
-                fprintf(stderr, "\nCannot open the file: %s (file handler is null)", basePath);
+            has_errs = true;
+            g_stats.num_files_with_errs++;
+
+            if (!fp) {
+                sprintf(err_description, "\nCannot open the file: %s (file handler is null)", basePath);
+                fprintf(stderr, "%s",err_description);
+            }
             else {
                 char buffer[33];
                 itoa(ferror_flags, buffer, 2);
-                fprintf(stderr, "\nCannot open the file: %s (mask bit err: %s)", basePath, buffer);
+                sprintf(err_description, "\nCannot open the file: %s (mask bit err: %s)", basePath, buffer);
+                fprintf(stderr, "%s",err_description);
             }
 
         }
@@ -652,16 +666,18 @@ void p_scan_file(char *basePath, bool verbose) {
     (verbose) ? printf(" - l: %ldb", file_length) : 0;
 
     // Append the line in the CSV file
-    sprintf(report_line_buffer, "%s\t%f\t%d\t%d\t%d\t%d\t%ld\t%s\t%s\t%s\n", basePath,
+    sprintf(report_line_buffer, "%s\t%f\t%d\t%d\t%d\t%d\t%d\t%ld\t%s\t%s\t%s\t%s\n", basePath,
             H,
             magic_number_found,
+            has_errs,
             has_high_entropy,
             has_size_zero_or_less,
             has_min_size,
             file_length,
             ctime_s,
             atime_s,
-            mtime_s);
+            mtime_s,
+            err_description);
     append_to_report(report_line_buffer);
 }
 

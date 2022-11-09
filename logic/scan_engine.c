@@ -586,9 +586,9 @@ void p_scan_file(char *basePath, bool verbose) {
     } else {
 
         FILE *fp = fopen(basePath, "rb");
-        //nt ferror_flags = fp->_flag & 0x0020;
-        //if (fp && (ferror_flags == 0)) {
-        if (fp) {
+        int ferror_flags = -1;
+        if (fp && ((ferror_flags = fp->_flag & 0x0020) == 0)) {
+        //if (fp) {
 
             if (file_length > MAX_FILE_SIZE)
                 file_length = MAX_FILE_SIZE;
@@ -637,10 +637,15 @@ void p_scan_file(char *basePath, bool verbose) {
         } else {
             // TODO: put the information in the TSV
             // TODO: catch the specific access problem
-            //char buffer [33];
-            //itoa(ferror_flags,buffer,2);
-            //fprintf(stderr, "\nCannot open the file: %s (mask bit err: %s)", basePath, buffer);
-            fprintf(stderr, "\nCannot open the file: %s", basePath);
+
+            if (!fp)
+                fprintf(stderr, "\nCannot open the file: %s (file handler is null)", basePath);
+            else {
+                char buffer[33];
+                itoa(ferror_flags, buffer, 2);
+                fprintf(stderr, "\nCannot open the file: %s (mask bit err: %s)", basePath, buffer);
+            }
+
         }
     }
 

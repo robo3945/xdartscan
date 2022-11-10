@@ -564,7 +564,7 @@ void p_scan_file(char *basePath, bool verbose) {
     bool has_size_zero_or_less = false;
     bool has_min_size = false;
     bool has_errs = false;
-    char err_description[MAX_PATH_BUFFER+256];
+    char err_description[MAX_PATH_BUFFER+256]="";
     double H = -1;
     char report_line_buffer[MAX_PATH_BUFFER];
 
@@ -633,31 +633,26 @@ void p_scan_file(char *basePath, bool verbose) {
                 }
             } else {
                 // some problem in catching the magic number string
-                // TODO: put the information in the TSV
-
                 has_errs = true;
                 g_stats.num_files_with_errs++;
-                sprintf(err_description, "\nMagic number string problem in: %s", basePath);
-                fprintf(stderr, "%s",err_description);
+                sprintf(err_description, "Magic number string problem in: %s", basePath);
+                fprintf(stderr, "\n%s",err_description);
 
             }
             fclose(fp);
         } else {
-            // TODO: put the information in the TSV
-            // TODO: catch the specific access problem
-
             has_errs = true;
             g_stats.num_files_with_errs++;
 
             if (!fp) {
-                sprintf(err_description, "\nCannot open the file: %s (file handler is null)", basePath);
-                fprintf(stderr, "%s",err_description);
+                sprintf(err_description, "Cannot open the file: %s (file handler is null)", basePath);
+                fprintf(stderr, "\n%s",err_description);
             }
             else {
                 char buffer[33];
                 itoa(ferror_flags, buffer, 2);
-                sprintf(err_description, "\nCannot open the file: %s (mask bit err: %s)", basePath, buffer);
-                fprintf(stderr, "%s",err_description);
+                sprintf(err_description, "Cannot open the file: %s (mask bit err: %s)", basePath, buffer);
+                fprintf(stderr, "\n%s",err_description);
             }
 
         }
@@ -666,7 +661,8 @@ void p_scan_file(char *basePath, bool verbose) {
     (verbose) ? printf(" - l: %ldb", file_length) : 0;
 
     // Append the line in the CSV file
-    sprintf(report_line_buffer, "%s\t%f\t%d\t%d\t%d\t%d\t%d\t%ld\t%s\t%s\t%s\t%s\n", basePath,
+    sprintf(report_line_buffer, "%s\t%f\t%d\t%d\t%d\t%d\t%d\t%ld\t%s\t%s\t%s\t%s\n",
+            basePath,
             H,
             magic_number_found,
             has_errs,

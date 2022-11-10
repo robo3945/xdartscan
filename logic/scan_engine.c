@@ -633,8 +633,6 @@ void p_scan_file(char *basePath, bool verbose) {
                 }
             } else {
                 // some problem in catching the magic number string
-                // TODO: put the information in the TSV
-
                 has_errs = true;
                 g_stats.num_files_with_errs++;
                 sprintf(err_description, "Magic number string problem in: %s", basePath);
@@ -643,9 +641,6 @@ void p_scan_file(char *basePath, bool verbose) {
             }
             fclose(fp);
         } else {
-            // TODO: put the information in the TSV
-            // TODO: catch the specific access problem
-
             has_errs = true;
             g_stats.num_files_with_errs++;
 

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <locale.h>
 #include "headers/scan_engine.h"
 #include "headers/config_manager.h"
 
@@ -9,6 +10,8 @@ void print_help(char* param);
 
 int main(int argc, char *argv[])
 {
+    // Set locale for floating nums representation
+    setlocale(LC_NUMERIC, ".OCP");
     int opt;
     bool verbose = false;
     bool not_close_terminal_window = false;

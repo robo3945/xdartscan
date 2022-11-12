@@ -64,6 +64,10 @@ int main(int argc, char *argv[])
 
 }
 
+/**
+ * The help
+ * @param param
+ */
 void print_help(char *param) {
     fprintf(stdout, "XDartScan v. 1.0b\n");
     fprintf(stdout, "Usage: %s -i <dir_to_scan> -c <config_file_path>\n", param);

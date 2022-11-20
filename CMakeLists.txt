@@ -31,8 +31,15 @@ add_executable(test_signatures
         misc/utils.c
         headers/file_signatures.h)
 
+add_executable(test_entropy
+        testing/test_entropy.c
+        logic/random_test.c
+        logic/config_manager.c
+        misc/utils.c)
+
 # https://coderefinery.github.io/cmake-workshop/testing/
 # enable testing functionality
 enable_testing()
 
 add_test(NAME test_signatures COMMAND test_signatures)
+add_test(NAME test_entropy COMMAND test_entropy)

@@ -1,6 +1,6 @@
 ## XDartScanner ##
 [![License](https://img.shields.io/badge/license-GPL3-green)](https://github.com/robo3945/xdartscanner/blob/master/LICENSE)
-[![Build](https://img.shields.io/badge/build-1.8b-yellowgreen)]()
+[![Build](https://img.shields.io/badge/build-1.0b-yellowgreen)]()
 
 XDartScanner is a scanner for encrypted files.
 You can find all the encrypted stuff such as

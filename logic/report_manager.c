@@ -26,9 +26,11 @@ void append_to_report(char* line){
 
 void p_create_header(){
     char buf[MAX_PATH_BUFFER];
-    sprintf(buf, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", "PATH",
+    sprintf(buf, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+            "PATH",
             "Entropy",
             "Magic Number",
+            "Magic Hex String",
             "Errs",
             "High Entropy",
             "Almost zero",

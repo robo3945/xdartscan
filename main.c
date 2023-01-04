@@ -8,6 +8,8 @@
 
 void print_help(char* param);
 
+void test_and_read_config_file(bool verbose, char *config_dir);
+
 int main(int argc, char *argv[])
 {
     // Set locale for floating nums representation
@@ -44,15 +46,14 @@ int main(int argc, char *argv[])
         print_help(argv[0]);
 
     if (input_dir!=NULL) {
-        if (config_dir == NULL) {
-            if (read_config_file("config.ini", verbose))
-                if (read_config_file("../config.ini", verbose))
-                    printf("Configuration file not found in path: \"%s\"", "../config.ini");
-        }
-        else if (read_config_file(config_dir, verbose))
-            printf("Configuration file not found in path: \"%s\"", config_dir);
-
+        test_and_read_config_file(verbose, config_dir);
         main_scan(input_dir, verbose);
+
+        if (verbose) {
+            // Only to show the configuration params at the end of computation (for verbose mode)
+            test_and_read_config_file(verbose, config_dir);
+        }
+
         if (not_close_terminal_window) {
             printf("\n\n\nPress RETURN to close...");
             getc(stdin);
@@ -64,13 +65,28 @@ int main(int argc, char *argv[])
 
 }
 
+void test_and_read_config_file(bool verbose, char *config_dir) {
+    if (config_dir == NULL) {
+        if (read_config_file("config.ini", verbose))
+            if (read_config_file("../config.ini", verbose))
+                printf("Configuration file not found in path: \"%s\"", "../config.ini");
+    }
+    else if (read_config_file(config_dir, verbose))
+        printf("Configuration file not found in path: \"%s\"", config_dir);
+}
+
 /**
  * The help
  * @param param
  */
 void print_help(char *param) {
     fprintf(stdout, "XDartScan v. 1.0b\n");
-    fprintf(stdout, "Usage: %s -i <dir_to_scan> -c <config_file_path>\n", param);
+    fprintf(stdout, "Usage: %s -i <dir_to_scan> -c <config_file_path -v\n", param);
+    fprintf(stdout, "-i <dir_to_scan>\n");
+    fprintf(stdout, "-c <config_file_path>\n");
+    fprintf(stdout, "-v: verbose mode\n");
+    fprintf(stdout, "-x: not close terminal\n");
+
     exit(EXIT_SUCCESS);
 }
 

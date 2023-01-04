@@ -567,6 +567,7 @@ void p_scan_file(char *basePath, bool verbose) {
     char err_description[MAX_PATH_BUFFER+256]="";
     double H = -1;
     char report_line_buffer[MAX_PATH_BUFFER];
+    char magic_number_hex_string[MAGIC_NUMBER_BYTE_SIZE * 2 + 1];
 
     // take the access, creation and modification file timestamp
     struct stat attr;
@@ -598,7 +599,6 @@ void p_scan_file(char *basePath, bool verbose) {
 
             // read the magic number
             unsigned char *magic_number_string = p_read_magic_number(fp);
-            char magic_number_hex_string[MAGIC_NUMBER_BYTE_SIZE * 2 + 1];
 
             // search if it is a well knwon magic number
             if (magic_number_string != NULL) {
@@ -661,10 +661,11 @@ void p_scan_file(char *basePath, bool verbose) {
     (verbose) ? printf(" - l: %ldb", file_length) : 0;
 
     // Append the line in the CSV file
-    sprintf(report_line_buffer, "%s\t%f\t%d\t%d\t%d\t%d\t%d\t%ld\t%s\t%s\t%s\t%s\n",
+    sprintf(report_line_buffer, "%s\t%f\t%d\t%s\t%d\t%d\t%d\t%d\t%ld\t%s\t%s\t%s\t%s\n",
             basePath,
             H,
             magic_number_found,
+            magic_number_hex_string,
             has_errs,
             has_high_entropy,
             has_size_zero_or_less,

@@ -592,7 +592,6 @@ void p_scan_file(char *basePath, bool verbose) {
         FILE *fp = fopen(basePath, "rb");
         int ferror_flags = -1;
         if (fp && ((ferror_flags = fp->_flag & 0x0020) == 0)) {
-        //if (fp) {
 
             if (file_length > MAX_FILE_SIZE)
                 file_length = MAX_FILE_SIZE;
@@ -607,14 +606,27 @@ void p_scan_file(char *basePath, bool verbose) {
                         magic_number_string[3]);
                 free(magic_number_string);
 
-                //magic_number_found = has_magic_number_simple(magic_number_string);
-                magic_number_found = p_binary_search(strtoul(magic_number_hex_string, NULL, 16), 0,
-                                                     SIGNATURES_VECTOR_LENGTH - 1);
+                /*
+                 * Try to find the magic number of 8 bytes or in alternative 6 bytes
+                 * It not found magic number lower than 6 bytes because it can generate a false negative!
+                */
+                int cont =0;
+                while (!magic_number_found && cont<2) {
 
-                if (magic_number_found) {
-                    (verbose) ? printf("(magic found: %s)", magic_number_hex_string) : 0;
-                    g_stats.num_files_with_well_known_magic_number++;
-                } else {
+                    //magic_number_found = has_magic_number_simple(magic_number_string);
+                    magic_number_found = p_binary_search(strtoul(magic_number_hex_string, NULL, 16), 0,
+                                                         SIGNATURES_VECTOR_LENGTH - 1);
+
+                    if (magic_number_found) {
+                        (verbose) ? printf("(magic found: %s)", magic_number_hex_string) : 0;
+                        g_stats.num_files_with_well_known_magic_number++;
+                    }
+
+                    // Set the null char to trim the string
+                    magic_number_hex_string[8-2*(++cont)]=0;
+                }
+
+                if (!magic_number_found) {
 
                     unsigned char *content = p_read_file_content(fp, basePath, file_length);
                     if (file_length > MIN_FILE_SIZE && content != NULL) {

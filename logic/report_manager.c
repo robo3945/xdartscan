@@ -10,7 +10,7 @@ static FILE *fp = NULL;
 
 bool create_report(char* full_path, bool verbose){
     char path[MAX_PATH_BUFFER];
-    sprintf(path, "%s%d.tsv", full_path, rand());
+    snprintf(path, MAX_PATH_BUFFER, "%s%d.tsv", full_path, rand());
 
     if ((fp = fopen(path, "a")) != NULL) {
         (verbose)?printf("\nTSV file created: %s\n\n",path ):0;

@@ -15,11 +15,16 @@ static const int MAGIC_NUMBER_BYTE_SIZE = 4;
 
 bool p_binary_search(unsigned long magic_number, int lower, int upper);
 
-void p_scan_file(char *basePath, bool verbose);
+void p_scan_file(char *fullPath, bool verbose);
 
 void p_scan_files(char *base_path, int indent, bool verbose);
 
 long p_read_length(FILE *fp);
+
+void append_line_to_report(const char *fullPath, long file_length, bool magic_number_found, bool has_high_entropy,
+                           bool has_size_zero_or_less, bool has_min_size, bool has_errs, const char *err_description,
+                           double H, char *report_line_buffer, const char *magic_number_hex_string, const char *mtime_s,
+                           const char *ctime_s, const char *atime_s);
 
 MagicNumber g_well_known_mn[] = {
         {"41435344",                                                                                             "[['*', 'AOL parameter|info files']]"},
@@ -552,10 +557,10 @@ void p_scan_files(char *base_path, int indent, bool verbose) {
 /**
  * Scan a file
  *
- * @param basePath
+ * @param fullPath
  * @param verbose
  */
-void p_scan_file(char *basePath, bool verbose) {
+void p_scan_file(char *fullPath, bool verbose) {
     long file_length = -1;
 
     // flags
@@ -571,7 +576,7 @@ void p_scan_file(char *basePath, bool verbose) {
 
     // take the access, creation and modification file timestamp
     struct stat attr;
-    stat(basePath, &attr);
+    stat(fullPath, &attr);
     char *mtime_s = strtok(ctime(&attr.st_mtime), "\n");
     char *ctime_s = strtok(ctime(&attr.st_ctime), "\n");
     char *atime_s = strtok(ctime(&attr.st_atime), "\n");
@@ -589,7 +594,7 @@ void p_scan_file(char *basePath, bool verbose) {
 
     } else {
 
-        FILE *fp = fopen(basePath, "rb");
+        FILE *fp = fopen(fullPath, "rb");
         int ferror_flags = -1;
         if (fp && ((ferror_flags = fp->_flag & 0x0020) == 0)) {
 
@@ -628,7 +633,7 @@ void p_scan_file(char *basePath, bool verbose) {
 
                 if (!magic_number_found) {
 
-                    unsigned char *content = p_read_file_content(fp, basePath, file_length);
+                    unsigned char *content = p_read_file_content(fp, fullPath, file_length);
                     if (file_length > MIN_FILE_SIZE && content != NULL) {
                         H = calc_rand_idx(content, file_length);
                         if (H > ENTROPY_TH) {
@@ -647,7 +652,7 @@ void p_scan_file(char *basePath, bool verbose) {
                 // some problem in catching the magic number string
                 has_errs = true;
                 g_stats.num_files_with_errs++;
-                sprintf(err_description, "Magic number string problem in: %s", basePath);
+                sprintf(err_description, "Magic number string problem in: %s", fullPath);
                 fprintf(stderr, "\n%s",err_description);
 
             }
@@ -657,13 +662,13 @@ void p_scan_file(char *basePath, bool verbose) {
             g_stats.num_files_with_errs++;
 
             if (!fp) {
-                sprintf(err_description, "Cannot open the file: %s (file handler is null)", basePath);
+                sprintf(err_description, "Cannot open the file: %s (file handler is null)", fullPath);
                 fprintf(stderr, "\n%s",err_description);
             }
             else {
                 char buffer[33];
                 itoa(ferror_flags, buffer, 2);
-                sprintf(err_description, "Cannot open the file: %s (mask bit err: %s)", basePath, buffer);
+                sprintf(err_description, "Cannot open the file: %s (mask bit err: %s)", fullPath, buffer);
                 fprintf(stderr, "\n%s",err_description);
             }
 
@@ -673,8 +678,35 @@ void p_scan_file(char *basePath, bool verbose) {
     (verbose) ? printf(" - l: %ldb", file_length) : 0;
 
     // Append the line in the CSV file
-    sprintf(report_line_buffer, "%s\t%f\t%d\t%s\t%d\t%d\t%d\t%d\t%ld\t%s\t%s\t%s\t%s\n",
-            basePath,
+
+    append_line_to_report(fullPath, file_length, magic_number_found, has_high_entropy, has_size_zero_or_less,
+                          has_min_size, has_errs,
+                          err_description, H, report_line_buffer, magic_number_hex_string, mtime_s, ctime_s, atime_s);
+}
+
+/**
+ * Append the line to the final report
+ */
+void append_line_to_report(const char *fullPath, long file_length, bool magic_number_found, bool has_high_entropy,
+                           bool has_size_zero_or_less, bool has_min_size, bool has_errs, const char *err_description,
+                           double H, char *report_line_buffer, const char *magic_number_hex_string, const char *mtime_s,
+                           const char *ctime_s, const char *atime_s) {
+    
+    // extract the file component
+    char file_name[MAX_PATH_BUFFER]="";
+    char* p_end_of_path = strrchr(fullPath, '/' );
+    strncpy(file_name, p_end_of_path+1, MAX_PATH_BUFFER);
+    
+    // extract the extension component
+    char ext[MAX_EXT_SIZE]="";
+    char* p_end_of_file = strrchr(fullPath, '.' );
+    strncpy(ext, p_end_of_file+1, MAX_EXT_SIZE);
+    
+    
+    sprintf(report_line_buffer, "%s\t%s\t%s\t%f\t%d\t%s\t%d\t%d\t%d\t%d\t%ld\t%s\t%s\t%s\t%s\n",
+            fullPath,
+            file_name,
+            ext,
             H,
             magic_number_found,
             magic_number_hex_string,

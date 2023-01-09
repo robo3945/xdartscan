@@ -13,5 +13,9 @@ Every run produces a report file in the TSV format.
 
 ```
 XDartScan v. 1.0b
-Usage: %s -i <dir_to_scan> -c <config_file_path> -v
+Usage: xdartscan.exe -i <dir_to_scan> -c <config_file_path> -v
+-i <dir_to_scan>
+-c <config_file_path>
+-v: verbose mode
+-x: not close terminal
 ```

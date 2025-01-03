@@ -596,7 +596,7 @@ void p_scan_file(char *fullPath, bool verbose) {
 
         FILE *fp = fopen(fullPath, "rb");
         int ferror_flags = -1;
-        if (fp && ((ferror_flags = fp->_flag & 0x0020) == 0)) {
+        if (fp && (ferror_flags = fp->_flag & 0x0020) == 0) {
 
             if (file_length > MAX_FILE_SIZE)
                 file_length = MAX_FILE_SIZE;
@@ -623,7 +623,7 @@ void p_scan_file(char *fullPath, bool verbose) {
                                                          SIGNATURES_VECTOR_LENGTH - 1);
 
                     if (magic_number_found) {
-                        (verbose) ? printf("(magic found: %s)", magic_number_hex_string) : 0;
+                        verbose ? printf("(magic found: %s)", magic_number_hex_string) : 0;
                         g_stats.num_files_with_well_known_magic_number++;
                     }
 
@@ -639,9 +639,9 @@ void p_scan_file(char *fullPath, bool verbose) {
                         if (H > ENTROPY_TH) {
                             g_stats.num_files_with_high_entropy++;
                             has_high_entropy = true;
-                            (verbose) ? printf("(high H: %f)", H) : 0;
+                            verbose ? printf("(high H: %f)", H) : 0;
                         } else {
-                            (verbose) ? printf("(low H: %f)", H) : 0;
+                            verbose ? printf("(low H: %f)", H) : 0;
                             g_stats.num_files_with_low_entropy++;
                         }
 
@@ -675,7 +675,7 @@ void p_scan_file(char *fullPath, bool verbose) {
         }
     }
 
-    (verbose) ? printf(" - l: %ldb", file_length) : 0;
+    verbose ? printf(" - l: %ldb", file_length) : 0;
 
     // Append the line in the CSV file
 
@@ -699,10 +699,9 @@ void append_line_to_report(const char *fullPath, long file_length, bool magic_nu
     
     // extract the extension component
     char ext[MAX_EXT_SIZE]="";
-    char* p_end_of_file = strrchr(fullPath, '.' );
-    strncpy(ext, p_end_of_file+1, MAX_EXT_SIZE);
-    
-    
+    const char* p_end_of_file = strrchr(fullPath, '.' );
+    p_end_of_file?strncpy(ext, p_end_of_file+1, MAX_EXT_SIZE):NULL;
+
     sprintf(report_line_buffer, "%s\t%s\t%s\t%f\t%d\t%s\t%d\t%d\t%d\t%d\t%ld\t%s\t%s\t%s\t%s\n",
             fullPath,
             file_name,

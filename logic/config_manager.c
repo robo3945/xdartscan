@@ -25,23 +25,23 @@ void p_populate_struct(MagicNumber *mn_array);
  * read the config file
  *
  * @param filename
+ * @param verbose
  * @return 0 if file was read 1 otherwise
  */
-int read_config_file(char* filename, bool verbose) {
+int read_config_file(char* filename, const bool verbose) {
     FILE *fp;
-    char line[CONFIG_MAXLINE];
 
     if ((fp = fopen(filename, "r")) != NULL) {
         printf("\n---------------------------- CONFIG ---------------------------- \n");
         printf("Config path: %s\n\n", filename);
 
         while (!feof(fp)) {
+            char line[CONFIG_MAXLINE];
             fgets(line, CONFIG_MAXLINE, fp);
 
-            char *token;
-            char* delim = "=";
+            const char* delim = "=";
             int num_token = 0;
-            token = strtok(line, delim);
+            char *token = strtok(line, delim);
             char* param_name = NULL, *param_value = NULL;
             while( token != NULL ) {
                 switch(num_token)
@@ -55,19 +55,19 @@ int read_config_file(char* filename, bool verbose) {
                             param_value = trim(token);
                             if (strncmp(param_name, "ENTROPY_TH", CONFIG_MAXPARAM - 1) == 0) {
                                 ENTROPY_TH = strtod(param_value, NULL);
-                                (verbose)?printf("Config param: %s value: \t\t%f\n","ENTROPY_TH",ENTROPY_TH):0;
+                                verbose?printf("Config param: %s value: \t\t%f\n","ENTROPY_TH",ENTROPY_TH):0;
                             }
                             else if (strncmp(param_name, "DEBUG_PRINT", CONFIG_MAXPARAM - 1) == 0) {
                                 DEBUG_PRINT = (int) strtol(param_value, NULL, 10);
-                                (verbose)?printf("Config param: %s value: \t\t%d\n","DEBUG_PRINT",DEBUG_PRINT):0;
+                                verbose?printf("Config param: %s value: \t\t%d\n","DEBUG_PRINT",DEBUG_PRINT):0;
                             }
                             else if (strncmp(param_name, "MIN_FILE_SIZE", MIN_FILE_SIZE - 1) == 0) {
                                 MIN_FILE_SIZE = (int) strtol(param_value, NULL, 10);
-                                (verbose)?printf("Config param: %s value: \t\t%d\n","MIN_FILE_SIZE",MIN_FILE_SIZE):0;
+                                verbose?printf("Config param: %s value: \t\t%d\n","MIN_FILE_SIZE",MIN_FILE_SIZE):0;
                             }
                             else if (strncmp(param_name, "MAX_FILE_SIZE", MAX_FILE_SIZE - 1) == 0) {
                                 MAX_FILE_SIZE = (int) strtol(param_value, NULL, 10);
-                                (verbose)?printf("Config param: %s value: \t\t%d\n","MAX_FILE_SIZE",MAX_FILE_SIZE):0;
+                                verbose?printf("Config param: %s value: \t\t%d\n","MAX_FILE_SIZE",MAX_FILE_SIZE):0;
                             }
 
                         }
@@ -112,16 +112,15 @@ void sort_signatures(MagicNumber* mn_array){
     // First of all, trim the signatures to first 4 bytes and converts in unsigned long
     p_populate_struct(mn_array);
 
-    int min;
     for(int i=0; i<SIGNATURES_VECTOR_LENGTH; i++){
-        min=i;
+        int min = i;
         for (int j = i+1;j < SIGNATURES_VECTOR_LENGTH; j++){
             if (mn_array[j].number8_ul < mn_array[min].number8_ul)
                 min=j;
         }
 
         // Swap the objects
-        MagicNumber t = mn_array[min];
+        const MagicNumber t = mn_array[min];
         mn_array[min] = mn_array[i];
         mn_array[i] = t;
     }
@@ -143,7 +142,7 @@ void sort_signatures(MagicNumber* mn_array){
  */
 void p_populate_struct(MagicNumber *mn_array) {
     for (int i=0; i < SIGNATURES_VECTOR_LENGTH; i++) {
-        char* n = mn_array[i].number_s;
+        const char* n = mn_array[i].number_s;
         int size = 8;
         if (strlen(n) <size)
             size = (int) strlen(n);

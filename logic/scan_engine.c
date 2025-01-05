@@ -522,22 +522,33 @@ unsigned char *p_read_magic_number(FILE *fp) {
  * @param verbose
  */
 void p_scan_files(char *base_path, int indent, bool verbose) {
-    int i;
     char path[MAX_PATH_BUFFER];
     struct dirent *dp;
+
+    // Remove the final slash if present
+    char normalized_path[MAX_PATH_BUFFER];
+    strcpy(normalized_path, base_path);
+    size_t len = strlen(normalized_path);
+    if (len > 0 && (normalized_path[len - 1] == '/' || normalized_path[len - 1] == '\\')) {
+        normalized_path[len - 1] = '\0';
+    }
+
     DIR *dir = opendir(base_path);
 
     if (dir == NULL) {
-        g_stats.num_files++;
-        p_scan_file(base_path, verbose);
-        return;
+        // if opendir fails, it verifies if it is a file or not
+        struct stat path_stat;
+        if (stat(normalized_path, &path_stat) == 0 && S_ISREG(path_stat.st_mode)) {
+            g_stats.num_files++;
+            p_scan_file(normalized_path, verbose);
+        }
     }
 
     while ((dp = readdir(dir)) != NULL) {
         if (strcmp(dp->d_name, ".") != 0 && strcmp(dp->d_name, "..") != 0) {
             if (verbose) {
                 printf("\n  ");
-                for (i = 0; i < indent; i++)
+                for (int i = 0; i < indent; i++)
                     printf(" ");
             }
 

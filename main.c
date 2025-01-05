@@ -85,7 +85,7 @@ void test_and_read_config_file(bool verbose, char *config_dir) {
  * @param param
  */
 void print_help(char *param) {
-    fprintf(stdout, "XDartScan v. 1.0b\n");
+    fprintf(stdout, "XDartScan v. 1.1b\n");
     fprintf(stdout, "Usage: %s -i <dir_to_scan> -c <config_file_path> -v\n", param);
     fprintf(stdout, "-i <dir_to_scan>\n");
     fprintf(stdout, "-c <config_file_path>\n");

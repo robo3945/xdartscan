@@ -42,10 +42,14 @@ int main(int argc, char *argv[])
                     exit(EXIT_FAILURE);
             }
         }
-    else
+    else {
         print_help(argv[0]);
+        exit(EXIT_FAILURE);
+    }
 
     if (input_dir!=NULL) {
+        print_help(argv[0]);
+
         test_and_read_config_file(verbose, config_dir);
         main_scan(input_dir, verbose);
 
@@ -61,6 +65,7 @@ int main(int argc, char *argv[])
     }
     else {
         print_help(argv[0]);
+        exit(EXIT_FAILURE);
     }
 
 }
@@ -86,8 +91,6 @@ void print_help(char *param) {
     fprintf(stdout, "-c <config_file_path>\n");
     fprintf(stdout, "-v: verbose mode\n");
     fprintf(stdout, "-x: not close terminal\n");
-
-    exit(EXIT_SUCCESS);
 }
 
 

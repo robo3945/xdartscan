@@ -10,6 +10,7 @@
 #include "../headers/config_manager.h"
 #include "../headers/random_test.h"
 #include "../headers/report_manager.h"
+#include "../headers/utils.h"
 
 static const int MAGIC_NUMBER_BYTE_SIZE = 4;
 
@@ -455,8 +456,7 @@ void main_scan(char *root_path, bool verbose) {
     clock_gettime(CLOCK_REALTIME, &end);
 
     // time_spent = end - start
-    double time_spent = (end.tv_sec - start.tv_sec) +
-                        (end.tv_nsec - start.tv_nsec) / BILLION;
+    const double time_spent = end.tv_sec - start.tv_sec + (end.tv_nsec - start.tv_nsec) / BILLION;
 
     printf("\n\n\n");
     printf("\n---------------------------- STATS ---------------------------- ");
@@ -472,7 +472,11 @@ void main_scan(char *root_path, bool verbose) {
     printf("\nNumber of files with length < min_size:                       %d", g_stats.num_files_with_min_size);
     printf("\nNumber of files with ERRS:                       %d", g_stats.num_files_with_errs);
 
-    printf("\nTime elpased is %f seconds", time_spent);
+    printf("\nSize processed is %llu (byte)", g_stats.size_files);
+    printf("\nTime elapsed is %f seconds", time_spent);
+    char* tp = malloc(MAX_PATH_BUFFER * sizeof(char));
+    format_size(g_stats.size_files/time_spent, tp, MAX_PATH_BUFFER);
+    printf("\nThroughput is %s/seconds", tp);
     printf("\n---------------------------- ***** ---------------------------- ");
 }
 
@@ -687,6 +691,7 @@ void p_scan_file(char *fullPath, bool verbose) {
     }
 
     verbose ? printf(" - l: %ldb", file_length) : 0;
+    g_stats.size_files += file_length;
 
     // Append the line in the CSV file
 

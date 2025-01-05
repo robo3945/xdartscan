@@ -1,7 +1,26 @@
 #include "../headers/utils.h"
+
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+
+void format_size(const long bytes, char *result, const size_t result_size) {
+    const char *units[] = {"B", "KB", "MB", "GB"};
+    int unit_index = 0;
+    double size = bytes;
+
+    while (size >= 1024.0 && unit_index < 3) {
+        size /= 1024.0;
+        unit_index++;
+    }
+
+    if (unit_index == 0) {
+        snprintf(result, result_size, "%ld %s", bytes, units[unit_index]);
+    } else {
+        snprintf(result, result_size, "%.2f %s", size, units[unit_index]);
+    }
+}
 
 char * strnstr(const char *s, const char *find, size_t slen)
 {

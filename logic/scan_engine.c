@@ -16,13 +16,11 @@ static const int MAGIC_NUMBER_BYTE_SIZE = 4;
 
 bool p_binary_search(unsigned long magic_number, int lower, int upper);
 
-void p_scan_file(char *fullPath, bool verbose);
+void p_scan_file(const char *fullPath, bool verbose);
 
-void p_scan_files(char *base_path, int indent, bool verbose);
+void p_scan_files(const char *base_path, int indent, bool verbose);
 
-long p_read_length(FILE *fp);
-
-void append_line_to_report(const char *fullPath, long file_length, bool magic_number_found, bool has_high_entropy,
+void append_line_to_report(const char *fullPath, unsigned long file_length, bool magic_number_found, bool has_high_entropy,
                            bool has_size_zero_or_less, bool has_min_size, bool has_errs, const char *err_description,
                            double H, char *report_line_buffer, const char *magic_number_hex_string, const char *mtime_s,
                            const char *ctime_s, const char *atime_s);
@@ -472,31 +470,21 @@ void main_scan(char *root_path, bool verbose) {
     printf("\nNumber of files with length < min_size:                       %d", g_stats.num_files_with_min_size);
     printf("\nNumber of files with ERRS:                       %d", g_stats.num_files_with_errs);
 
-    printf("\nSize processed is %llu (byte)", g_stats.size_files);
-    printf("\nTime elapsed is %f seconds", time_spent);
     char* tp = malloc(MAX_PATH_BUFFER * sizeof(char));
+
+    format_size(g_stats.size_files, tp, MAX_PATH_BUFFER);
+    printf("\nSize processed is %s (%llu byte)", tp, g_stats.size_files);
+
+    printf("\nTime elapsed is %f seconds", time_spent);
+
     format_size(g_stats.size_files/time_spent, tp, MAX_PATH_BUFFER);
     printf("\nThroughput is %s/seconds", tp);
+
+    free(tp);
+
     printf("\n---------------------------- ***** ---------------------------- ");
 }
 
-/**
- * Read a binary file in memory with the magic number_s (first 4 bytes)
- *
- * @param path
- * @param length
- * @param magic_number_out
- * @return
- */
-unsigned char *p_read_file_content(FILE *fp, char *path, long length) {
-
-    unsigned char *buffer = NULL;
-    if (fseek(fp, 0, SEEK_SET) == 0) {
-        buffer = (unsigned char *) malloc(length * sizeof(unsigned char));
-        fread(buffer, sizeof(unsigned char), length, fp);
-    }
-    return buffer;
-}
 
 /**
  * Read the magic number
@@ -506,15 +494,8 @@ unsigned char *p_read_file_content(FILE *fp, char *path, long length) {
  */
 unsigned char *p_read_magic_number(FILE *fp) {
 
-    unsigned char *buffer_mn = NULL;
-
-    if (fseek(fp, 0, SEEK_SET) == 0) {
-        // Allocates the buffer for the magic byte
-        buffer_mn = malloc(sizeof(unsigned char) * MAGIC_NUMBER_BYTE_SIZE + 1);
-        fread(buffer_mn, sizeof(unsigned char), MAGIC_NUMBER_BYTE_SIZE, fp);
-        buffer_mn[MAGIC_NUMBER_BYTE_SIZE] = '\0';
-    }
-
+    unsigned char *buffer_mn = read_file_content(fp, MAGIC_NUMBER_BYTE_SIZE+1);
+    if (buffer_mn!=NULL) buffer_mn[MAGIC_NUMBER_BYTE_SIZE] = '\0';
     return buffer_mn;
 }
 
@@ -525,14 +506,13 @@ unsigned char *p_read_magic_number(FILE *fp) {
  * @param indent
  * @param verbose
  */
-void p_scan_files(char *base_path, int indent, bool verbose) {
-    char path[MAX_PATH_BUFFER];
+void p_scan_files(const char *base_path, const int indent, const bool verbose) {
     struct dirent *dp;
 
     // Remove the final slash if present
     char normalized_path[MAX_PATH_BUFFER];
     strcpy(normalized_path, base_path);
-    size_t len = strlen(normalized_path);
+    const size_t len = strlen(normalized_path);
     if (len > 0 && (normalized_path[len - 1] == '/' || normalized_path[len - 1] == '\\')) {
         normalized_path[len - 1] = '\0';
     }
@@ -541,8 +521,9 @@ void p_scan_files(char *base_path, int indent, bool verbose) {
 
     if (dir == NULL) {
         // if opendir fails, it verifies if it is a file or not
-        struct stat path_stat;
-        if (stat(normalized_path, &path_stat) == 0 && S_ISREG(path_stat.st_mode)) {
+        // struct stat path_stat;
+        // if (stat(normalized_path, &path_stat) == 0 && S_ISREG(path_stat.st_mode)) {
+        if (is_regular_file(normalized_path)) {
             g_stats.num_files++;
             p_scan_file(normalized_path, verbose);
         }
@@ -550,6 +531,7 @@ void p_scan_files(char *base_path, int indent, bool verbose) {
 
     while ((dp = readdir(dir)) != NULL) {
         if (strcmp(dp->d_name, ".") != 0 && strcmp(dp->d_name, "..") != 0) {
+            char path[MAX_PATH_BUFFER];
             if (verbose) {
                 printf("\n  ");
                 for (int i = 0; i < indent; i++)
@@ -560,7 +542,7 @@ void p_scan_files(char *base_path, int indent, bool verbose) {
             strcat(path, "/");
             strcat(path, dp->d_name);
 
-            (verbose) ? printf("|- %s ", dp->d_name) : 0;
+            verbose ? printf("|- %s ", dp->d_name) : 0;
 
             p_scan_files(path, indent + 2, verbose);
         }
@@ -575,9 +557,7 @@ void p_scan_files(char *base_path, int indent, bool verbose) {
  * @param fullPath
  * @param verbose
  */
-void p_scan_file(char *fullPath, bool verbose) {
-    long file_length = -1;
-
+void p_scan_file(const char *fullPath, const bool verbose) {
     // flags
     bool magic_number_found = false;
     bool has_high_entropy = false;
@@ -592,10 +572,10 @@ void p_scan_file(char *fullPath, bool verbose) {
     // take the access, creation and modification file timestamp
     struct stat attr;
     stat(fullPath, &attr);
-    char *mtime_s = strtok(ctime(&attr.st_mtime), "\n");
-    char *ctime_s = strtok(ctime(&attr.st_ctime), "\n");
-    char *atime_s = strtok(ctime(&attr.st_atime), "\n");
-    file_length = attr.st_size;
+    const char *mtime_s = strtok(ctime(&attr.st_mtime), "\n");
+    const char *ctime_s = strtok(ctime(&attr.st_ctime), "\n");
+    const char *atime_s = strtok(ctime(&attr.st_atime), "\n");
+    unsigned long file_length = attr.st_size;
 
     // exit for file too small
     if (file_length < MAGIC_NUMBER_BYTE_SIZE || file_length < MIN_FILE_SIZE) {
@@ -610,11 +590,11 @@ void p_scan_file(char *fullPath, bool verbose) {
     } else {
 
         FILE *fp = fopen(fullPath, "rb");
-        int ferror_flags = -1;
-        if (fp && (ferror_flags = fp->_flag & 0x0020) == 0) {
+        //if (fp && (ferror_flags = fp->_flag & 0x0020) == 0) {
+        if (fp) {
 
-            if (file_length > MAX_FILE_SIZE)
-                file_length = MAX_FILE_SIZE;
+            // TODO: performance are not better with limitations to MAX_FILE_SIZE...
+            // if (file_length > MAX_FILE_SIZE) file_length = MAX_FILE_SIZE;
 
             // read the magic number
             unsigned char *magic_number_string = p_read_magic_number(fp);
@@ -648,7 +628,8 @@ void p_scan_file(char *fullPath, bool verbose) {
 
                 if (!magic_number_found) {
 
-                    unsigned char *content = p_read_file_content(fp, fullPath, file_length);
+                    // TODO: leak memory?
+                    unsigned char *content = read_file_content(fp, file_length);
                     if (file_length > MIN_FILE_SIZE && content != NULL) {
                         H = calc_rand_idx(content, file_length);
                         if (H > ENTROPY_TH) {
@@ -659,9 +640,9 @@ void p_scan_file(char *fullPath, bool verbose) {
                             verbose ? printf("(low H: %f)", H) : 0;
                             g_stats.num_files_with_low_entropy++;
                         }
-
-                        free(content);
                     }
+                    if (content != NULL)
+                        free(content);
                 }
             } else {
                 // some problem in catching the magic number string
@@ -676,21 +657,22 @@ void p_scan_file(char *fullPath, bool verbose) {
             has_errs = true;
             g_stats.num_files_with_errs++;
 
-            if (!fp) {
-                sprintf(err_description, "Cannot open the file: %s (file handler is null)", fullPath);
-                fprintf(stderr, "\n%s",err_description);
+            const int error = ferror(fp);
+            if (error!=0)
+            {
+                char buffer[33];
+                itoa(error, buffer, 2);
+                sprintf(err_description, "Cannot open the file: %s (mask bit err: %s)", fullPath, buffer);
+                perror(err_description);
             }
             else {
-                char buffer[33];
-                itoa(ferror_flags, buffer, 2);
-                sprintf(err_description, "Cannot open the file: %s (mask bit err: %s)", fullPath, buffer);
+                sprintf(err_description, "Cannot open the file: %s (ferror == 0)", fullPath);
                 fprintf(stderr, "\n%s",err_description);
             }
-
         }
     }
 
-    verbose ? printf(" - l: %ldb", file_length) : 0;
+    verbose ? printf(" - l: %lu", file_length) : 0;
     g_stats.size_files += file_length;
 
     // Append the line in the CSV file
@@ -703,14 +685,14 @@ void p_scan_file(char *fullPath, bool verbose) {
 /**
  * Append the line to the final report
  */
-void append_line_to_report(const char *fullPath, long file_length, bool magic_number_found, bool has_high_entropy,
+void append_line_to_report(const char *fullPath, unsigned long file_length, bool magic_number_found, bool has_high_entropy,
                            bool has_size_zero_or_less, bool has_min_size, bool has_errs, const char *err_description,
                            double H, char *report_line_buffer, const char *magic_number_hex_string, const char *mtime_s,
                            const char *ctime_s, const char *atime_s) {
     
     // extract the file component
     char file_name[MAX_PATH_BUFFER]="";
-    char* p_end_of_path = strrchr(fullPath, '/' );
+    const char* p_end_of_path = strrchr(fullPath, '/' );
     strncpy(file_name, p_end_of_path+1, MAX_PATH_BUFFER);
     
     // extract the extension component
@@ -737,7 +719,6 @@ void append_line_to_report(const char *fullPath, long file_length, bool magic_nu
     append_to_report(report_line_buffer);
 }
 
-
 bool has_magic_number_simple(const char *magic_number_string) {
     bool magic_number_found = false;
     for (int j = 0; j < SIGNATURES_VECTOR_LENGTH; j++)
@@ -748,9 +729,10 @@ bool has_magic_number_simple(const char *magic_number_string) {
     return magic_number_found;
 }
 
-bool p_binary_search(unsigned long magic_number, int lower, int upper) {
+// TODO: to delete
+bool old_p_binary_search(unsigned long magic_number, int lower, int upper) {
     while (lower <= upper) {
-        int mid = (upper + lower) / 2;
+        const int mid = (upper + lower) / 2;
 
         if (g_well_known_mn[mid].number8_ul == magic_number)
             return true;
@@ -764,16 +746,24 @@ bool p_binary_search(unsigned long magic_number, int lower, int upper) {
     return false;
 }
 
-/**
- * Return the file length
- * @param fp
- * @return -1 for problem otherwise the length
- */
-long p_read_length(FILE *fp) {
+bool p_binary_search(const unsigned long magic_number, int lower, int upper) {
+    while (lower <= upper) {
+        // Previene l'overflow nella somma
+        const int mid = lower + ((upper - lower) >> 1);
 
-    if (fseek(fp, 0, SEEK_END) == 0)
-        return ftell(fp);
-    return -1;
+        // Salva il valore in una variabile locale per evitare accessi multipli all'array
+        const unsigned long current = g_well_known_mn[mid].number8_ul;
+
+        if (current == magic_number)
+            return true;
+
+        // Uso di un operatore ternario per rendere il codice più compatto
+        // e potenzialmente permettere migliori ottimizzazioni del compilatore
+        lower = current < magic_number ? mid + 1 : lower;
+        upper = current < magic_number ? upper : mid - 1;
+    }
+
+    return false;
 }
 
 

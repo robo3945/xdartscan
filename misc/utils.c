@@ -5,7 +5,7 @@
 #include <string.h>
 #include <sys/stat.h>
 
-void format_size(const long bytes, char *result, const size_t result_size) {
+void format_size(const unsigned long long bytes, char *result, const size_t result_size) {
     const char *units[] = {"B", "KB", "MB", "GB"};
     int unit_index = 0;
     double size = bytes;
@@ -48,6 +48,37 @@ int is_regular_file(const char *path) {
            (S_ISREG(path_stat.st_mode));
 }
 
+
+/**
+ * Read a binary file in memory
+ *
+ * @param fp
+ * @param bytes_to_read
+ * @return
+ */
+unsigned char *read_file_content(FILE *fp, unsigned long bytes_to_read) {
+
+    unsigned char *buffer = NULL;
+
+    if (fseek(fp, 0, SEEK_SET) != 0) {
+        return NULL;
+    }
+
+    buffer = (unsigned char *) malloc(bytes_to_read * sizeof(unsigned char));
+    if (buffer == NULL) {
+        return NULL;
+    }
+    size_t bytes_read = fread(buffer, sizeof(unsigned char), bytes_to_read, fp);
+
+    if (bytes_read != bytes_to_read) {
+        free(buffer);
+        return NULL;
+    }
+
+    return buffer;
+}
+
+
 char* trim(const char *src)
 {
     char *dst = malloc(sizeof(char)*(strlen(src)+1));
@@ -63,6 +94,19 @@ char* trim(const char *src)
 
     return dst;
 }
+
+/**
+ * Return the file length
+ * @param fp
+ * @return -1 for problem otherwise the length
+ */
+long read_file_length(FILE *fp) {
+
+    if (fseek(fp, 0, SEEK_END) == 0)
+        return ftell(fp);
+    return -1;
+}
+
 
 // Function to swap two numbers
 void swap(char *x, char *y) {

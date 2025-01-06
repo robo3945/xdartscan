@@ -5,6 +5,7 @@
 
 #include "../headers/config.h"
 
+// TODO: to delete
 /**
  * Computes the Entropy factor
  *
@@ -67,7 +68,7 @@ double old_calc_rand_idx(const unsigned char *content, const long content_length
  * @return
  *
  */
-double calc_rand_idx(const unsigned char *content, const long content_length) {
+double calc_rand_idx(const unsigned char *content, const unsigned long content_length) {
     if (!content || content_length <= 0) {
         return 0.0;
     }

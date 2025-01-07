@@ -25,6 +25,21 @@ void append_line_to_report(const char *fullPath, unsigned long file_length, bool
                            double H, char *report_line_buffer, const char *magic_number_hex_string, const char *mtime_s,
                            const char *ctime_s, const char *atime_s);
 
+/**
+ * Represents a collection of well-known magic numbers and their associated file types or formats.
+ *
+ * The `g_well_known_mn` array serves as a mapping between specific hexadecimal sequences
+ * (known as magic numbers) and the corresponding file formats or types that use these sequences
+ * as their headers or identifiers.
+ *
+ * Each entry consists of:
+ * - A magic number (in hexadecimal string format).
+ * - A detailed description of potential file formats associated with the magic number,
+ *   including file extensions and a brief format or usage description.
+ *
+ * This array is typically used for identifying and categorizing file formats
+ * based on their magic numbers during file analysis or format detection processes.
+ */
 MagicNumber g_well_known_mn[] = {
         {"41435344",                                                                                             "[['*', 'AOL parameter|info files']]"},
         {"62706c697374",                                                                                         "[['*', 'Binary property list (plist)']]"},
@@ -427,10 +442,16 @@ MagicNumber g_well_known_mn[] = {
 
 
 /**
- * The main scan function
+ * Performs the main scanning operation starting from a specified root directory.
+ * This function initializes required components, creates report files, scans
+ * files in the directory tree, collects statistics, and writes results to the
+ * report.
  *
- * @param root_path
- * @param verbose
+ * @param root_path The root directory path where the scan should begin. The path
+ *                  must be valid and accessible.
+ * @param verbose   A boolean flag indicating whether verbose output should be
+ *                  enabled. If true, detailed progress and error information
+ *                  will be displayed.
  */
 void main_scan(char *root_path, bool verbose) {
     struct timespec start, end;
@@ -470,10 +491,16 @@ void main_scan(char *root_path, bool verbose) {
 
 
 /**
- * Read the magic number
+ * Reads the magic number from a file.
+ * A magic number is a sequence of bytes typically used to identify or validate
+ * the format of a file. The function reads a fixed number of bytes from the
+ * given file, appends a null terminator, and returns the resulting buffer.
  *
- * @param fp
- * @return
+ * @param fp A pointer to the FILE object from which the magic number should
+ *           be read. The file must be opened and readable.
+ * @return A dynamically allocated buffer containing the magic number as a
+ *         null-terminated string. Returns NULL if the operation fails.
+ *         The caller is responsible for freeing the allocated memory.
  */
 unsigned char *p_read_magic_number(FILE *fp) {
 
@@ -483,11 +510,11 @@ unsigned char *p_read_magic_number(FILE *fp) {
 }
 
 /**
- * Scan recursively the base_path
+ * Recursively scans files and directories from a given base path.
  *
- * @param base_path
- * @param indent
- * @param verbose
+ * @param base_path The base directory path from which the scan begins.
+ * @param indent The indentation level for verbose output formatting.
+ * @param verbose A flag to enable or disable verbose output during the scan.
  */
 void p_scan_files(const char *base_path, const int indent, const bool verbose) {
     struct dirent *dp;
@@ -524,10 +551,11 @@ void p_scan_files(const char *base_path, const int indent, const bool verbose) {
 }
 
 /**
- * Scan a file
+ * Scans a file and performs several operations such as checking the file's magic number,
+ * entropy, size, and errors. It also updates statistics and appends a report summary.
  *
- * @param fullPath
- * @param verbose
+ * @param fullPath The full path to the file to be scanned.
+ * @param verbose A flag indicating whether detailed output should be printed during the scan.
  */
 void p_scan_file(const char *fullPath, const bool verbose) {
     // flags
@@ -658,7 +686,22 @@ void p_scan_file(const char *fullPath, const bool verbose) {
 }
 
 /**
- * Append the line to the final report
+ * Appends a formatted line containing file details and analysis results to a reporting buffer.
+ *
+ * @param fullPath The full path of the file being analyzed.
+ * @param file_length The size of the file in bytes.
+ * @param magic_number_found Indicates whether the file contains a recognized magic number.
+ * @param has_high_entropy Indicates whether the file has high entropy.
+ * @param has_size_zero_or_less Indicates whether the file size is zero or less than an expected threshold.
+ * @param has_min_size Indicates whether the file meets the minimum size requirement.
+ * @param has_errs Indicates whether any errors were encountered during file processing.
+ * @param err_description A description of any errors encountered during processing.
+ * @param H The entropy value of the file content.
+ * @param report_line_buffer The buffer where the formatted report line will be stored.
+ * @param magic_number_hex_string The hexadecimal representation of the file's magic number if found.
+ * @param mtime_s The file's last modification time as a string.
+ * @param ctime_s The file's creation time as a string.
+ * @param atime_s The file's last access time as a string.
  */
 void append_line_to_report(const char *fullPath, unsigned long file_length, bool magic_number_found, bool has_high_entropy,
                            bool has_size_zero_or_less, bool has_min_size, bool has_errs, const char *err_description,
@@ -694,6 +737,13 @@ void append_line_to_report(const char *fullPath, unsigned long file_length, bool
     append_to_report_tsv(report_line_buffer);
 }
 
+/**
+ * Checks if the given magic number string matches any entry in the predefined
+ * well-known magic numbers list.
+ *
+ * @param magic_number_string The magic number string to check.
+ * @return true if the magic number string is found in the predefined list, false otherwise.
+ */
 bool has_magic_number_simple(const char *magic_number_string) {
     bool magic_number_found = false;
     for (int j = 0; j < SIGNATURES_VECTOR_LENGTH; j++)
@@ -704,23 +754,16 @@ bool has_magic_number_simple(const char *magic_number_string) {
     return magic_number_found;
 }
 
-// TODO: to delete
-bool old_p_binary_search(unsigned long magic_number, int lower, int upper) {
-    while (lower <= upper) {
-        const int mid = (upper + lower) / 2;
-
-        if (g_well_known_mn[mid].number8_ul == magic_number)
-            return true;
-
-        if (g_well_known_mn[mid].number8_ul < magic_number)
-            lower = mid + 1;
-        else
-            upper = mid - 1;
-    }
-
-    return false;
-}
-
+/**
+ * Performs a binary search to determine if the specified magic number exists
+ * within the range defined by lower and upper indices in a well-known list of
+ * magic numbers.
+ *
+ * @param magic_number The target magic number to search for.
+ * @param lower The lower bound index of the search range.
+ * @param upper The upper bound index of the search range.
+ * @return true if the magic number is found within the range, false otherwise.
+ */
 bool p_binary_search(const unsigned long magic_number, int lower, int upper) {
     while (lower <= upper) {
         // Previene l'overflow nella somma

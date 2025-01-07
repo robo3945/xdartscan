@@ -11,6 +11,21 @@ void print_help(char* param);
 
 void test_and_read_config_file(bool verbose, char *config_dir);
 
+/**
+ * Entry point of the application. Parses command-line arguments, processes the input directory,
+ * and performs the main scanning and configuration tasks. Provides logging and help functionality.
+ *
+ * @param argc The number of command-line arguments.
+ * @param argv The array of command-line arguments (including the program name as the first element).
+ *             Supported options:
+ *             - '-h': Displays usage help and exits.
+ *             - '-v': Enables verbose mode for detailed logging.
+ *             - '-x': Prevents the terminal window from closing automatically after execution.
+ *             - '-i <input_dir>': Specifies the input directory to process.
+ *             - '-c <config_dir>': Specifies the directory for the configuration file.
+ * @return An integer indicating the program's exit status. Returns 0 on successful execution,
+ *         or exits with an error code in case of a failure or invalid input.
+ */
 int main(int argc, char *argv[])
 {
     // Set locale for floating nums representation
@@ -73,6 +88,16 @@ int main(int argc, char *argv[])
 
 }
 
+/**
+ * Reads the configuration file from the specified directory or default locations.
+ * If a directory is provided, attempts to read the configuration file from that directory.
+ * If no directory is provided, it searches for "config.ini" in the current and parent directories.
+ * Logs the process if verbose mode is enabled.
+ *
+ * @param verbose Enables verbose logging if set to true.
+ * @param config_dir The directory where the configuration file is expected to be located.
+ *                   Pass NULL to use the default search paths.
+ */
 void test_and_read_config_file(bool verbose, char *config_dir) {
     if (config_dir == NULL) {
         if (read_config_file("config.ini", verbose))

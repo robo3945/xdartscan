@@ -23,11 +23,15 @@ GlobStat g_stats = {};
 void p_populate_struct(MagicNumber *mn_array);
 
 /**
- * read the config file
+ * Reads a configuration file and parses its contents into respective global parameters.
  *
- * @param filename
- * @param verbose
- * @return 0 if file was read 1 otherwise
+ * The function interprets key-value pairs in a configuration file, trims the parameters,
+ * and updates the appropriate global variables for configuration settings. If verbose
+ * mode is enabled, it prints the parsed parameters and their values to the standard output.
+ *
+ * @param filename The path to the configuration file to be read.
+ * @param verbose A flag indicating whether verbose output should be printed (true for verbose, false otherwise).
+ * @return Returns 0 if the file is successfully parsed, or 1 if the file could not be opened.
  */
 int read_config_file(char* filename, const bool verbose) {
     FILE *fp;
@@ -108,10 +112,14 @@ int read_config_file(char* filename, const bool verbose) {
 }
 
 /**
- * Function to sort signatures
+ * Sorts an array of MagicNumber structures based on the `number8_ul` attribute in ascending order.
  *
- * trim the signatures to the first 4 bytes and then sort the array
+ * The function first trims the signatures in the array to the first 4 bytes
+ * and converts them into the `number8_ul` field through a helper function.
+ * It then performs a selection sort to reorder the entries in the array.
+ * If debugging is enabled via the `DEBUG_PRINT` flag, the sorted table is printed to the console.
  *
+ * @param mn_array A pointer to an array of MagicNumber structures to be sorted.
  */
 void sort_signatures(MagicNumber* mn_array){
 
@@ -142,9 +150,14 @@ void sort_signatures(MagicNumber* mn_array){
 }
 
 /**
- * Populates the struct with other attrs
+ * Populates and processes an array of MagicNumber structures.
  *
- * @param mn_array
+ * The function performs several operations on each MagicNumber element in the provided array:
+ * - Truncates the `number_s` field to 8 characters (or fewer if the string length is smaller)
+ * - Allocates memory for and assigns the truncated string to the `number8_s` field
+ * - Converts the truncated string to an unsigned long and assigns it to the `number8_ul` field
+ *
+ * @param mn_array A pointer to an array of MagicNumber structures, where each element will be processed.
  */
 void p_populate_struct(MagicNumber *mn_array) {
     for (int i=0; i < SIGNATURES_VECTOR_LENGTH; i++) {

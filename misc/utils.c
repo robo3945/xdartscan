@@ -8,6 +8,13 @@
 #include <string.h>
 #include <sys/stat.h>
 
+/**
+ * Formats a byte size into a human-readable string with appropriate units.
+ *
+ * @param bytes The size in bytes to format.
+ * @param result A pointer to a character array where the formatted string will be stored.
+ * @param result_size The size of the result array to ensure safe writing.
+ */
 void format_size(const unsigned long long bytes, char *result, const size_t result_size) {
     const char *units[] = {"B", "KB", "MB", "GB"};
     int unit_index = 0;
@@ -44,12 +51,25 @@ char *strnstr(const char *s, const char *find, size_t slen) {
     return ((char *) s);
 }
 
+/**
+ * Determines if a given file path corresponds to a regular file.
+ *
+ * @param path The file path to check.
+ * @return Non-zero if the path corresponds to a regular file; otherwise, 0.
+ */
 int is_regular_file(const char *path) {
     struct stat path_stat;
     return !stat(path, &path_stat) &&
            (S_ISREG(path_stat.st_mode));
 }
 
+/**
+ * Normalize a file system path by removing a trailing slash or backslash if present.
+ *
+ * @param path The input path string to normalize.
+ * @return A dynamically allocated string containing the normalized path.
+ *         It is the caller's responsibility to free the allocated memory.
+ */
 char *normalize_path(const char *path) {
     char *normalized_path = malloc(MAX_PATH_BUFFER * sizeof(char));
     strcpy(normalized_path, path);
@@ -66,11 +86,12 @@ bool is_directory(const char *path) {
 }
 
 /**
- * Read a binary file in memory
+ * Reads the content of a file into a dynamically allocated buffer.
  *
- * @param fp
- * @param bytes_to_read
- * @return
+ * @param fp A pointer to an open file stream from which the content will be read.
+ * @param bytes_to_read The number of bytes to read from the file.
+ * @return A pointer to the dynamically allocated buffer containing the file content,
+ *         or NULL if an error occurs (e.g., file read error, memory allocation failure).
  */
 unsigned char *read_file_content(FILE *fp, unsigned long bytes_to_read) {
     unsigned char *buffer = NULL;
@@ -136,6 +157,18 @@ char *reverse(char *buffer, int i, int j) {
     return buffer;
 }
 
+/**
+ * Converts an integer value to a null-terminated string using the specified base.
+ *
+ * @param value The integer value to convert.
+ * @param buffer Pointer to the buffer where the resulting string will be stored.
+ *               The buffer must be large enough to contain the resulting string,
+ *               including the null-terminating character.
+ * @param base The numerical base to use for the conversion. Supported bases are
+ *             between 2 and 32, inclusive. If the base is 10 and the value is
+ *             negative, the string will be prefixed with a minus sign.
+ * @return A pointer to the buffer containing the resulting string representation.
+ */
 char *itoa(int value, char *buffer, int base) {
     // invalid input
     if (base < 2 || base > 32) {

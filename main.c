@@ -5,6 +5,7 @@
 #include <locale.h>
 #include "headers/scan_engine.h"
 #include "headers/config_manager.h"
+#include "headers/utils.h"
 
 void print_help(char* param);
 
@@ -43,11 +44,12 @@ int main(int argc, char *argv[])
             }
         }
     else {
+        fprintf(stderr, "There are not valid arguments\n");
         print_help(argv[0]);
         exit(EXIT_FAILURE);
     }
 
-    if (input_dir!=NULL) {
+    if (input_dir!=NULL && is_directory(input_dir)) {
         print_help(argv[0]);
 
         test_and_read_config_file(verbose, config_dir);
@@ -64,6 +66,7 @@ int main(int argc, char *argv[])
         }
     }
     else {
+        fprintf(stderr, "Input dir does not exist!\n");
         print_help(argv[0]);
         exit(EXIT_FAILURE);
     }

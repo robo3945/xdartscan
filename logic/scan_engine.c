@@ -441,48 +441,31 @@ void main_scan(char *root_path, bool verbose) {
 
     // creates the CSV file: open it
     srand(time(NULL));
-    if (!create_report("./outcome", verbose))
+    const int r = rand();
+    if (!create_report_file("./report", r, "tsv", verbose))
+        fprintf(stderr, "CSV file output problem\n");
+
+    if (!create_report_file("./stats", r, "txt", verbose))
         fprintf(stderr, "CSV file output problem\n");
 
     // start the scanning
     printf("+ %s", root_path);
     p_scan_files(root_path, 2, verbose);
 
-    // close the file
-    close_file();
 
     clock_gettime(CLOCK_REALTIME, &end);
 
     // time_spent = end - start
     const double time_spent = end.tv_sec - start.tv_sec + (end.tv_nsec - start.tv_nsec) / BILLION;
 
-    printf("\n\n\n");
-    printf("\n---------------------------- STATS ---------------------------- ");
-    printf("\nNumber of files scanned:                                      %d", g_stats.num_files);
-    printf("\nNumber of files with High Entropy:                            %d",
-           g_stats.num_files_with_high_entropy);
-    printf("\nNumber of files with low Entropy:                             %d",
-           g_stats.num_files_with_low_entropy);
-    printf("\nNumber of files with Well Known Magic Number:                 %d",
-           g_stats.num_files_with_well_known_magic_number);
-    printf("\nNumber of files with zero size or less of magic number_s size:  %d",
-           g_stats.num_files_with_size_zero_or_less);
-    printf("\nNumber of files with length < min_size:                       %d", g_stats.num_files_with_min_size);
-    printf("\nNumber of files with ERRS:                       %d", g_stats.num_files_with_errs);
+    char buffer[MAX_STATS_BUFFER];
+    make_stats(root_path, time_spent, buffer);
+    printf("\n");
+    printf("%s\n", buffer);
+    append_to_report_txt(buffer);
 
-    char* tp = malloc(MAX_PATH_BUFFER * sizeof(char));
+    close_file();
 
-    format_size(g_stats.size_files, tp, MAX_PATH_BUFFER);
-    printf("\nSize processed is %s (%llu byte)", tp, g_stats.size_files);
-
-    printf("\nTime elapsed is %f seconds", time_spent);
-
-    format_size(g_stats.size_files/time_spent, tp, MAX_PATH_BUFFER);
-    printf("\nThroughput is %s/seconds", tp);
-
-    free(tp);
-
-    printf("\n---------------------------- ***** ---------------------------- ");
 }
 
 
@@ -509,25 +492,14 @@ unsigned char *p_read_magic_number(FILE *fp) {
 void p_scan_files(const char *base_path, const int indent, const bool verbose) {
     struct dirent *dp;
 
-    // Remove the final slash if present
-    char normalized_path[MAX_PATH_BUFFER];
-    strcpy(normalized_path, base_path);
-    const size_t len = strlen(normalized_path);
-    if (len > 0 && (normalized_path[len - 1] == '/' || normalized_path[len - 1] == '\\')) {
-        normalized_path[len - 1] = '\0';
-    }
+    char* normalized_path = normalize_path(base_path);
+    DIR *dir = opendir(normalized_path);
 
-    DIR *dir = opendir(base_path);
-
-    if (dir == NULL) {
-        // if opendir fails, it verifies if it is a file or not
-        // struct stat path_stat;
-        // if (stat(normalized_path, &path_stat) == 0 && S_ISREG(path_stat.st_mode)) {
-        if (is_regular_file(normalized_path)) {
-            g_stats.num_files++;
-            p_scan_file(normalized_path, verbose);
-        }
+    if (dir == NULL && is_regular_file(normalized_path)) {
+        g_stats.num_files++;
+        p_scan_file(normalized_path, verbose);
     }
+    free(normalized_path);
 
     while ((dp = readdir(dir)) != NULL) {
         if (strcmp(dp->d_name, ".") != 0 && strcmp(dp->d_name, "..") != 0) {
@@ -631,7 +603,10 @@ void p_scan_file(const char *fullPath, const bool verbose) {
                     // TODO: leak memory?
                     unsigned char *content = read_file_content(fp, file_length);
                     if (file_length > MIN_FILE_SIZE && content != NULL) {
-                        H = calc_rand_idx(content, file_length);
+
+                        if (!THROUGHPUT_TEST)
+                            H = calc_rand_idx(content, file_length);
+
                         if (H > ENTROPY_TH) {
                             g_stats.num_files_with_high_entropy++;
                             has_high_entropy = true;
@@ -716,7 +691,7 @@ void append_line_to_report(const char *fullPath, unsigned long file_length, bool
             atime_s,
             mtime_s,
             err_description);
-    append_to_report(report_line_buffer);
+    append_to_report_tsv(report_line_buffer);
 }
 
 bool has_magic_number_simple(const char *magic_number_string) {

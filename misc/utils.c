@@ -26,7 +26,7 @@ void format_size(const unsigned long long bytes, char *result, const size_t resu
     }
 
     if (unit_index == 0) {
-        snprintf(result, result_size, "%ld %s", bytes, units[unit_index]);
+        snprintf(result, result_size, "%llu %s", bytes, units[unit_index]);
     } else {
         snprintf(result, result_size, "%.2f %s", size, units[unit_index]);
     }

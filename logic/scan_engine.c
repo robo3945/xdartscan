@@ -540,8 +540,8 @@ void p_scan_files(const char *base_path, const int indent, const bool verbose) {
             }
 
             strncpy(path, normalized_path, strlen(normalized_path));
-            strncat(path, "/", 1);
-            strncat(path, item_name, strlen(item_name));
+            strcat(path, "/");
+            strcat(path, item_name);
 
             verbose ? printf("|- %s ", item_name) : 0;
 

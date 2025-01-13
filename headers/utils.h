@@ -13,6 +13,8 @@ char* itoa(int value, char* buffer, int base);
 
 void format_size(unsigned long long bytes, char *result, size_t result_size);
 
+int format_time(const double seconds, char* const buffer, const size_t buffer_size);
+
 int is_regular_file(const char *path);
 
 unsigned char *read_file_content(FILE *fp, unsigned long bytes_to_read);

@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <tgmath.h>
 #include <sys/stat.h>
 
 /**
@@ -30,6 +31,48 @@ void format_size(const unsigned long long bytes, char *result, const size_t resu
     } else {
         snprintf(result, result_size, "%.2f %s", size, units[unit_index]);
     }
+}
+
+
+/**
+ * Formats time from seconds (with milliseconds) to HH:MM:SS.mmm format
+ *
+ * @param seconds Total number of seconds with milliseconds as double
+ * @param buffer Buffer where the formatted string will be written
+ * @param buffer_size Size of the buffer
+ * @return 0 if successful, -1 if error
+ */
+int format_time(const double seconds, char* const buffer, const size_t buffer_size) {
+    if (buffer == NULL || buffer_size < 13) {  // HH:MM:SS.mmm\0 needs 13 characters
+        return -1;  // Invalid or too small buffer
+    }
+
+    // Handle negative numbers
+    if (seconds < 0) {
+        return -1;
+    }
+
+    // Extract the integer part of seconds
+    const unsigned long whole_seconds_total = (unsigned long)floor(seconds);
+
+    // Calculate milliseconds (decimal part)
+    const unsigned int milliseconds = (unsigned int)((seconds - whole_seconds_total) * 1000);
+
+    // Calculate hours, minutes and seconds
+    const unsigned int hours = whole_seconds_total / 3600;
+    const unsigned int remaining_after_hours = whole_seconds_total % 3600;
+    const unsigned int minutes = remaining_after_hours / 60;
+    const unsigned int seconds_final = remaining_after_hours % 60;
+
+    // Format the string in the buffer
+    const int written = snprintf(buffer, buffer_size, "%02u:%02u:%02u.%03u",
+                          hours, minutes, seconds_final, milliseconds);
+
+    if (written < 0 || written >= buffer_size) {
+        return -1;  // Formatting error
+    }
+
+    return 0;
 }
 
 char *strnstr(const char *s, const char *find, size_t slen) {
@@ -257,20 +300,29 @@ void make_stats(char *root_path, const double time_spent, char *buffer) {
                        "\nNumber of files with ERRS:                       %d", g_stats.num_files_with_errs);
     offset += (written > 0) ? written : 0;
 
-    char tp[MAX_PATH_BUFFER];
-    format_size(g_stats.size_files, tp, MAX_PATH_BUFFER);
+    char size_formatted[MAX_PATH_BUFFER];
+    format_size(g_stats.size_files, size_formatted, MAX_PATH_BUFFER);
 
     written = snprintf(buffer + offset, MAX_LINE_BUFFER - offset,
-                       "\nSize processed is %s (%llu byte)", tp, g_stats.size_files);
+                       "\nSize processed is %s (%llu byte)", size_formatted, g_stats.size_files);
     offset += (written > 0) ? written : 0;
 
-    written = snprintf(buffer + offset, MAX_LINE_BUFFER - offset,
-                       "\nTime elapsed is %f seconds", time_spent);
+
+    char time_formatted[13];
+    const int ret = format_time(time_spent, time_formatted, sizeof(time_formatted));
+
+    if (!ret) {
+        written = snprintf(buffer + offset, MAX_LINE_BUFFER - offset,
+                           "\nTime elapsed is: %s (%f secs)", time_formatted, time_spent);
+    } else {
+        written = snprintf(buffer + offset, MAX_LINE_BUFFER - offset,
+                       "\nTime elapsed is: %f seconds", time_spent);
+    }
     offset += (written > 0) ? written : 0;
 
-    format_size(g_stats.size_files / time_spent, tp, MAX_PATH_BUFFER);
+    format_size(g_stats.size_files / time_spent, size_formatted, MAX_PATH_BUFFER);
     written = snprintf(buffer + offset, MAX_LINE_BUFFER - offset,
-                       "\nThroughput is %s/seconds", tp);
+                       "\nThroughput is %s/seconds", size_formatted);
     offset += (written > 0) ? written : 0;
 
     written = snprintf(buffer + offset, MAX_LINE_BUFFER - offset,

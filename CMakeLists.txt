@@ -43,3 +43,13 @@ enable_testing()
 
 add_test(NAME test_signatures COMMAND test_signatures)
 add_test(NAME test_entropy COMMAND test_entropy)
+
+# Aggiungere il comando install per l'applicazione
+install(TARGETS xdartscan        # Nome del target (eseguibile o libreria)
+        RUNTIME DESTINATION bin # Dove installare gli eseguibili
+        LIBRARY DESTINATION lib # Dove installare le librerie condivise
+        ARCHIVE DESTINATION lib/static) # Librerie statiche (se presenti)
+
+# Installare eventuali file di configurazione o risorse aggiuntive
+install(FILES config.ini
+        DESTINATION  bin)

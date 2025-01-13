@@ -19,3 +19,10 @@ Usage: xdartscan.exe -i <dir_to_scan> -c <config_file_path> -v
 -v: verbose mode
 -x: not close terminal
 ```
+
+### Examples ###
+
+```
+xdartscan.exe -i \\mydir -c C:\xdartscan\config.ini -v > report.txt
+```
+

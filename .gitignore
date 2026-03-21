@@ -127,3 +127,5 @@ dkms.conf
 
 
 .idea
+.iac-data
+.DS_Store

@@ -12,11 +12,12 @@
 #include "../headers/report_manager.h"
 #include "../headers/utils.h"
 
-static const int MAGIC_NUMBER_BYTE_SIZE = 4;
+#define MAGIC_NUMBER_BYTE_SIZE 4
+#define SCAN_READ_BUF_SIZE (64 * 1024)
 
 bool p_binary_search(unsigned long magic_number, int lower, int upper);
 
-void p_scan_file(const char *fullPath, bool verbose);
+void p_scan_file(const char *fullPath, unsigned long file_size, bool verbose);
 
 void p_scan_files(const char *base_path, int indent, bool verbose);
 
@@ -490,23 +491,6 @@ void main_scan(char *root_path, bool verbose) {
 }
 
 
-/**
- * Reads the magic number from a file.
- * A magic number is a sequence of bytes typically used to identify or validate
- * the format of a file. The function reads a fixed number of bytes from the
- * given file, appends a null terminator, and returns the resulting buffer.
- *
- * @param fp A pointer to the FILE object from which the magic number should
- *           be read. The file must be opened and readable.
- * @return A dynamically allocated buffer containing the magic number as a
- *         null-terminated string. Returns NULL if the operation fails.
- *         The caller is responsible for freeing the allocated memory.
- */
-unsigned char *p_read_magic_number(FILE *fp) {
-    unsigned char *buffer_mn = read_file_content(fp, MAGIC_NUMBER_BYTE_SIZE + 1);
-    if (buffer_mn != NULL) buffer_mn[MAGIC_NUMBER_BYTE_SIZE] = '\0';
-    return buffer_mn;
-}
 
 /**
  * Recursively scans files and directories from a given base path.
@@ -518,41 +502,66 @@ unsigned char *p_read_magic_number(FILE *fp) {
 void p_scan_files(const char *base_path, const int indent, const bool verbose) {
     struct dirent *dp;
 
-    char *normalized_path = normalize_path(base_path);
+    // Normalize path on stack instead of heap allocation
+    char normalized_path[MAX_PATH_BUFFER];
+    size_t base_len = strlen(base_path);
+    if (base_len >= MAX_PATH_BUFFER) return;
+    memcpy(normalized_path, base_path, base_len + 1);
+    if (base_len > 0 && (normalized_path[base_len - 1] == '/' || normalized_path[base_len - 1] == '\\')) {
+        normalized_path[--base_len] = '\0';
+    }
+
     DIR *dir = opendir(normalized_path);
 
-    if (normalized_path!=NULL && dir == NULL && is_regular_file(normalized_path)) {
-        g_stats.num_files++;
-        p_scan_file(normalized_path, verbose);
-        free(normalized_path);
+    if (dir == NULL) {
+        struct stat st;
+        if (stat(normalized_path, &st) == 0 && S_ISREG(st.st_mode)) {
+            g_stats.num_files++;
+            p_scan_file(normalized_path, st.st_size, verbose);
+        }
         return;
     }
+
     while ((dp = readdir(dir)) != NULL) {
-        char item_name[1024] = {0};
-        strncpy(item_name, dp->d_name, dp->d_namlen);
+        const char *name = dp->d_name;
 
-        if (strncmp(item_name, ".", 1) != 0 && strncmp(item_name, "..", 2) != 0) {
-            char path[MAX_PATH_BUFFER] = {0};
-            if (verbose) {
-                printf("\n  ");
-                for (int i = 0; i < indent; i++)
-                    printf(" ");
+        // Skip "." and ".." entries efficiently
+        if (name[0] == '.') {
+            if (name[1] == '\0' || (name[1] == '.' && name[2] == '\0'))
+                continue;
+        }
+
+        if (verbose) {
+            printf("\n  ");
+            for (int i = 0; i < indent; i++)
+                printf(" ");
+            printf("|- %s ", name);
+        }
+
+        // Build path on stack with snprintf
+        char path[MAX_PATH_BUFFER];
+        int path_len = snprintf(path, MAX_PATH_BUFFER, "%s/%s", normalized_path, name);
+        if (path_len < 0 || path_len >= MAX_PATH_BUFFER) continue;
+
+        // Use d_type to avoid stat() when possible
+#ifdef _DIRENT_HAVE_D_TYPE
+        if (dp->d_type == DT_REG) {
+            struct stat st;
+            if (stat(path, &st) == 0) {
+                g_stats.num_files++;
+                p_scan_file(path, st.st_size, verbose);
             }
-
-            strncpy(path, normalized_path, strlen(normalized_path));
-            strcat(path, "/");
-            strcat(path, item_name);
-
-            verbose ? printf("|- %s ", item_name) : 0;
-
+        } else if (dp->d_type == DT_DIR) {
+            p_scan_files(path, indent + 2, verbose);
+        } else {
+            // DT_UNKNOWN or other: fallback to recursive call
             p_scan_files(path, indent + 2, verbose);
         }
+#else
+        p_scan_files(path, indent + 2, verbose);
+#endif
     }
-    if (dir!=NULL)
-        closedir(dir);
-
-    if (normalized_path != NULL)
-        free(normalized_path);
+    closedir(dir);
 }
 
 /**
@@ -560,9 +569,10 @@ void p_scan_files(const char *base_path, const int indent, const bool verbose) {
  * entropy, size, and errors. It also updates statistics and appends a report summary.
  *
  * @param fullPath The full path to the file to be scanned.
+ * @param file_size The file size obtained from stat (avoids redundant stat call).
  * @param verbose A flag indicating whether detailed output should be printed during the scan.
  */
-void p_scan_file(const char *fullPath, const bool verbose) {
+void p_scan_file(const char *fullPath, const unsigned long file_size, const bool verbose) {
     // flags
     bool magic_number_found = false;
     bool has_high_entropy = false;
@@ -573,14 +583,21 @@ void p_scan_file(const char *fullPath, const bool verbose) {
     double H = -1;
     char report_line_buffer[MAX_PATH_BUFFER];
     char magic_number_hex_string[MAGIC_NUMBER_BYTE_SIZE * 2 + 1];
+    magic_number_hex_string[0] = '\0';
 
-    // take the access, creation and modification file timestamp
+    // Get file timestamps - use separate buffers to avoid ctime() static buffer overwrite
     struct stat attr;
     stat(fullPath, &attr);
-    const char *mtime_s = strtok(ctime(&attr.st_mtime), "\n");
-    const char *ctime_s = strtok(ctime(&attr.st_ctime), "\n");
-    const char *atime_s = strtok(ctime(&attr.st_atime), "\n");
-    unsigned long file_length = attr.st_size;
+    char mtime_buf[26], ctime_buf[26], atime_buf[26];
+    ctime_r(&attr.st_mtime, mtime_buf);
+    ctime_r(&attr.st_ctime, ctime_buf);
+    ctime_r(&attr.st_atime, atime_buf);
+    // Remove trailing newline
+    mtime_buf[strcspn(mtime_buf, "\n")] = '\0';
+    ctime_buf[strcspn(ctime_buf, "\n")] = '\0';
+    atime_buf[strcspn(atime_buf, "\n")] = '\0';
+
+    unsigned long file_length = file_size;
 
     // exit for file too small
     if (file_length < MAGIC_NUMBER_BYTE_SIZE || file_length < MIN_FILE_SIZE) {
@@ -593,92 +610,90 @@ void p_scan_file(const char *fullPath, const bool verbose) {
         }
     } else {
         FILE *fp = fopen(fullPath, "rb");
-        //if (fp && (ferror_flags = fp->_flag & 0x0020) == 0) {
         if (fp) {
-            // TODO: performance are not better with limitations to MAX_FILE_SIZE...
-            // if (file_length > MAX_FILE_SIZE) file_length = MAX_FILE_SIZE;
+            // Single read: read enough for both magic number and entropy analysis
+            // Cap read size for entropy to avoid reading huge files entirely
+            unsigned long read_size = file_length;
+            if (read_size > (unsigned long)MAX_FILE_SIZE)
+                read_size = (unsigned long)MAX_FILE_SIZE;
 
-            // read the magic number
-            unsigned char *magic_number_string = p_read_magic_number(fp);
-
-            // search if it is a well knwon magic number
-            if (magic_number_string != NULL) {
-                sprintf(magic_number_hex_string, "%02x%02x%02x%02x", magic_number_string[0], magic_number_string[1],
-                        magic_number_string[2],
-                        magic_number_string[3]);
-                free(magic_number_string);
-
-                /*
-                 * Try to find the magic number of 8 bytes or in alternative 6 bytes
-                 * It not found magic number lower than 6 bytes because it can generate a false negative!
-                */
-                int cont = 0;
-                while (!magic_number_found && cont < 2) {
-                    //magic_number_found = has_magic_number_simple(magic_number_string);
-                    magic_number_found = p_binary_search(strtoul(magic_number_hex_string, NULL, 16), 0,
-                                                         SIGNATURES_VECTOR_LENGTH - 1);
-
-                    if (magic_number_found) {
-                        verbose ? printf("(magic found: %s)", magic_number_hex_string) : 0;
-                        g_stats.num_files_with_well_known_magic_number++;
-                    }
-
-                    // Set the null char to trim the string
-                    magic_number_hex_string[8 - 2 * (++cont)] = 0;
-                }
-
-                if (!magic_number_found) {
-                    // TODO: leak memory?
-                    unsigned char *content = read_file_content(fp, file_length);
-                    if (file_length > MIN_FILE_SIZE && content != NULL) {
-                        if (!THROUGHPUT_TEST)
-                            H = calc_rand_idx(content, file_length);
-
-                        if (H > ENTROPY_TH) {
-                            g_stats.num_files_with_high_entropy++;
-                            has_high_entropy = true;
-                            verbose ? printf("(high H: %f)", H) : 0;
-                        } else {
-                            verbose ? printf("(low H: %f)", H) : 0;
-                            g_stats.num_files_with_low_entropy++;
-                        }
-                    }
-                    if (content != NULL)
-                        free(content);
-                }
-            } else {
-                // some problem in catching the magic number string
+            unsigned char *content = (unsigned char *)malloc(read_size);
+            if (content == NULL) {
                 has_errs = true;
                 g_stats.num_files_with_errs++;
-                sprintf(err_description, "Magic number string problem in: %s", fullPath);
+                snprintf(err_description, sizeof(err_description), "Memory allocation failed for: %s", fullPath);
                 fprintf(stderr, "\n%s", err_description);
+                fclose(fp);
+                goto report;
             }
+
+            size_t bytes_read = fread(content, 1, read_size, fp);
             fclose(fp);
+
+            if (bytes_read < MAGIC_NUMBER_BYTE_SIZE) {
+                has_errs = true;
+                g_stats.num_files_with_errs++;
+                snprintf(err_description, sizeof(err_description), "Read error in: %s", fullPath);
+                fprintf(stderr, "\n%s", err_description);
+                free(content);
+                goto report;
+            }
+
+            // Extract magic number from already-read buffer (no second read needed)
+            sprintf(magic_number_hex_string, "%02x%02x%02x%02x",
+                    content[0], content[1], content[2], content[3]);
+
+            // Convert magic number hex to unsigned long once
+            unsigned long magic_ul = ((unsigned long)content[0] << 24) |
+                                     ((unsigned long)content[1] << 16) |
+                                     ((unsigned long)content[2] << 8) |
+                                     (unsigned long)content[3];
+
+            // Try full 4-byte magic number, then 3-byte
+            int cont = 0;
+            while (!magic_number_found && cont < 2) {
+                unsigned long search_val = magic_ul >> (8 * cont);
+                magic_number_found = p_binary_search(search_val, 0, SIGNATURES_VECTOR_LENGTH - 1);
+
+                if (magic_number_found) {
+                    if (verbose) printf("(magic found: %s)", magic_number_hex_string);
+                    g_stats.num_files_with_well_known_magic_number++;
+                }
+
+                magic_number_hex_string[8 - 2 * (++cont)] = 0;
+            }
+
+            if (!magic_number_found) {
+                if (file_length > MIN_FILE_SIZE && !THROUGHPUT_TEST) {
+                    H = calc_rand_idx(content, bytes_read);
+                }
+
+                if (H > ENTROPY_TH) {
+                    g_stats.num_files_with_high_entropy++;
+                    has_high_entropy = true;
+                    if (verbose) printf("(high H: %f)", H);
+                } else {
+                    if (verbose) printf("(low H: %f)", H);
+                    g_stats.num_files_with_low_entropy++;
+                }
+            }
+
+            free(content);
         } else {
             has_errs = true;
             g_stats.num_files_with_errs++;
-
-            const int error = ferror(fp);
-            if (error != 0) {
-                char buffer[33];
-                itoa(error, buffer, 2);
-                sprintf(err_description, "Cannot open the file: %s (mask bit err: %s)", fullPath, buffer);
-                perror(err_description);
-            } else {
-                sprintf(err_description, "Cannot open the file: %s (ferror == 0)", fullPath);
-                fprintf(stderr, "\n%s", err_description);
-            }
+            snprintf(err_description, sizeof(err_description), "Cannot open the file: %s", fullPath);
+            fprintf(stderr, "\n%s", err_description);
         }
     }
 
-    verbose ? printf(" - l: %lu", file_length) : 0;
+report:
+    if (verbose) printf(" - l: %lu", file_length);
     g_stats.size_files += file_length;
-
-    // Append the line in the CSV file
 
     append_line_to_report(fullPath, file_length, magic_number_found, has_high_entropy, has_size_zero_or_less,
                           has_min_size, has_errs,
-                          err_description, H, report_line_buffer, magic_number_hex_string, mtime_s, ctime_s, atime_s);
+                          err_description, H, report_line_buffer, magic_number_hex_string, mtime_buf, ctime_buf, atime_buf);
 }
 
 /**
@@ -714,7 +729,7 @@ void append_line_to_report(const char *fullPath, unsigned long file_length, bool
     const char *p_end_of_file = strrchr(fullPath, '.');
     p_end_of_file ? strncpy(ext, p_end_of_file + 1, MAX_EXT_SIZE) : NULL;
 
-    sprintf(report_line_buffer, "%s\t%s\t%s\t%f\t%d\t%s\t%d\t%d\t%d\t%d\t%ld\t%s\t%s\t%s\t%s\n",
+    snprintf(report_line_buffer, MAX_PATH_BUFFER, "%s\t%s\t%s\t%f\t%d\t%s\t%d\t%d\t%d\t%d\t%ld\t%s\t%s\t%s\t%s\n",
             fullPath,
             file_name,
             ext,

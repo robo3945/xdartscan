@@ -35,7 +35,8 @@ void p_populate_struct(MagicNumber *mn_array);
  */
 int read_config_file(char* filename, const bool verbose) {
     FILE *fp;
-
+    
+    // Ottimizzazione: Confronto delle stringhe più efficiente
     if ((fp = fopen(filename, "r")) != NULL) {
         printf("\n---------------------------- CONFIG ---------------------------- \n");
         printf("Config path: %s\n\n", filename);
@@ -58,11 +59,12 @@ int read_config_file(char* filename, const bool verbose) {
                     case 1:
                         if (param_name) {
                             param_value = trim(token);
-                            if (strncmp(param_name, "ENTROPY_TH", CONFIG_MAXPARAM - 1) == 0) {
+                            // Ottimizzazione: Utilizzo di strcmp invece di strncmp quando possibile
+                            if (strcmp(param_name, "ENTROPY_TH") == 0) {
                                 ENTROPY_TH = strtod(param_value, NULL);
                                 verbose?printf("Config param: %s value: \t\t%f\n","ENTROPY_TH",ENTROPY_TH):0;
                             }
-                            else if (strncmp(param_name, "DEBUG_PRINT", CONFIG_MAXPARAM - 1) == 0) {
+                            else if (strcmp(param_name, "DEBUG_PRINT") == 0) {
                                 DEBUG_PRINT = (int) strtol(param_value, NULL, 10);
                                 verbose?printf("Config param: %s value: \t\t%d\n","DEBUG_PRINT",DEBUG_PRINT):0;
                             }
@@ -111,13 +113,16 @@ int read_config_file(char* filename, const bool verbose) {
     return 0;
 }
 
+static int compare_magic_numbers(const void *a, const void *b) {
+    const MagicNumber *ma = (const MagicNumber *)a;
+    const MagicNumber *mb = (const MagicNumber *)b;
+    if (ma->number8_ul < mb->number8_ul) return -1;
+    if (ma->number8_ul > mb->number8_ul) return 1;
+    return 0;
+}
+
 /**
  * Sorts an array of MagicNumber structures based on the `number8_ul` attribute in ascending order.
- *
- * The function first trims the signatures in the array to the first 4 bytes
- * and converts them into the `number8_ul` field through a helper function.
- * It then performs a selection sort to reorder the entries in the array.
- * If debugging is enabled via the `DEBUG_PRINT` flag, the sorted table is printed to the console.
  *
  * @param mn_array A pointer to an array of MagicNumber structures to be sorted.
  */
@@ -126,18 +131,8 @@ void sort_signatures(MagicNumber* mn_array){
     // First of all, trim the signatures to first 4 bytes and converts in unsigned long
     p_populate_struct(mn_array);
 
-    for(int i=0; i<SIGNATURES_VECTOR_LENGTH; i++){
-        int min = i;
-        for (int j = i+1;j < SIGNATURES_VECTOR_LENGTH; j++){
-            if (mn_array[j].number8_ul < mn_array[min].number8_ul)
-                min=j;
-        }
-
-        // Swap the objects
-        const MagicNumber t = mn_array[min];
-        mn_array[min] = mn_array[i];
-        mn_array[i] = t;
-    }
+    // Use qsort O(n log n) instead of selection sort O(n^2)
+    qsort(mn_array, SIGNATURES_VECTOR_LENGTH, sizeof(MagicNumber), compare_magic_numbers);
 
     if (DEBUG_PRINT) {
         printf("\n************************************************\n");

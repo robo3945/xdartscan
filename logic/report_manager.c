@@ -14,6 +14,11 @@ static FILE *fp_tsv;
 static FILE *fp_txt;
 
 bool create_report_file(char* full_path, int rand, char* ext, bool verbose){
+    // Ottimizzazione: Controllo preliminare per parametri nulli
+    if (!full_path || !ext) {
+        return false;
+    }
+    
     char path[MAX_PATH_BUFFER];
     snprintf(path, MAX_PATH_BUFFER, "%s%d.%s", full_path, rand, ext);
 
@@ -25,7 +30,9 @@ bool create_report_file(char* full_path, int rand, char* ext, bool verbose){
         return false;
 
     if ((*fp = fopen(path, "a")) != NULL) {
-        verbose?printf("\n%s file created: %s\n\n",ext, path ):0;
+        // Set large I/O buffer to reduce system calls
+        setvbuf(*fp, NULL, _IOFBF, 64 * 1024);
+        if (verbose) printf("\n%s file created: %s\n\n", ext, path);
         if (strcmp(ext, "tsv") == 0) p_create_header();
         return true;
     }
@@ -48,23 +55,8 @@ void append_to_report_txt(char* line){
 }
 
 void p_create_header(){
-    char buf[MAX_PATH_BUFFER];
-    sprintf(buf, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
-            "PATH",
-            "FILE",
-            "EXT",
-            "Entropy",
-            "Magic Number",
-            "Magic Hex String",
-            "Errs",
-            "High Entropy",
-            "Almost zero",
-            "Min size",
-            "Size",
-            "CTime",
-            "ATime",
-            "MTime",
-            "Description");
-    append_to_report_tsv(buf);
+    // Ottimizzazione: Utilizzo di una stringa costante predefinita invece di sprintf
+    static const char header[] = "PATH\tFILE\tEXT\tEntropy\tMagic Number\tMagic Hex String\tErrs\tHigh Entropy\tAlmost zero\tMin size\tSize\tCTime\tATime\tMTime\tDescription\n";
+    append_to_report_tsv((char*)header);
 }
 

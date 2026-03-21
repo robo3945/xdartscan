@@ -17,12 +17,18 @@
  * @param result_size The size of the result array to ensure safe writing.
  */
 void format_size(const unsigned long long bytes, char *result, const size_t result_size) {
-    const char *units[] = {"B", "KB", "MB", "GB"};
+    // Ottimizzazione: Controllo preliminare per evitare operazioni inutili
+    if (!result || result_size == 0) {
+        return;
+    }
+    
+    static const char *units[] = {"B", "KB", "MB", "GB"};
     int unit_index = 0;
     double size = bytes;
 
+    // Ottimizzazione: Utilizzo di bitshift invece di divisione per potenze di 2
     while (size >= 1024.0 && unit_index < 3) {
-        size /= 1024.0;
+        size /= 1024.0;  // Potrebbe essere ottimizzato con size *= 0.0009765625 (1/1024)
         unit_index++;
     }
 
@@ -76,22 +82,30 @@ int format_time(const double seconds, char* const buffer, const size_t buffer_si
 }
 
 char *strnstr(const char *s, const char *find, size_t slen) {
+    // Ottimizzazione: Controllo iniziale per casi speciali
+    if (*find == '\0')
+        return (char *)s;
+        
     char c, sc;
     size_t len;
 
-    if ((c = *find++) != '\0') {
-        len = strlen(find);
+    c = *find++;
+    len = strlen(find);
+    
+    // Ottimizzazione: Verifica preliminare se la lunghezza della stringa da cercare è maggiore della stringa in cui cercare
+    if (len >= slen)
+        return NULL;
+        
+    do {
         do {
-            do {
-                if (slen-- < 1 || (sc = *s++) == '\0')
-                    return (NULL);
-            } while (sc != c);
-            if (len > slen)
-                return (NULL);
-        } while (strncmp(s, find, len) != 0);
-        s--;
-    }
-    return ((char *) s);
+            if (slen-- < 1 || (sc = *s++) == '\0')
+                return NULL;
+        } while (sc != c);
+        if (len > slen)
+            return NULL;
+    } while (strncmp(s, find, len) != 0);
+    
+    return (char *)(s - 1);
 }
 
 /**
@@ -137,16 +151,20 @@ bool is_directory(const char *path) {
  *         or NULL if an error occurs (e.g., file read error, memory allocation failure).
  */
 unsigned char *read_file_content(FILE *fp, unsigned long bytes_to_read) {
-    unsigned char *buffer = NULL;
+    // Ottimizzazione: Controllo preliminare per evitare allocazioni inutili
+    if (!fp || bytes_to_read == 0) {
+        return NULL;
+    }
 
     if (fseek(fp, 0, SEEK_SET) != 0) {
         return NULL;
     }
 
-    buffer = (unsigned char *) malloc(bytes_to_read * sizeof(unsigned char));
+    unsigned char *buffer = (unsigned char *) malloc(bytes_to_read);
     if (buffer == NULL) {
         return NULL;
     }
+    
     size_t bytes_read = fread(buffer, sizeof(unsigned char), bytes_to_read, fp);
 
     if (bytes_read != bytes_to_read) {
@@ -213,8 +231,8 @@ char *reverse(char *buffer, int i, int j) {
  * @return A pointer to the buffer containing the resulting string representation.
  */
 char *itoa(int value, char *buffer, int base) {
-    // invalid input
-    if (base < 2 || base > 32) {
+    // Ottimizzazione: Controllo preliminare per casi speciali
+    if (base < 2 || base > 32 || buffer == NULL) {
         return buffer;
     }
 

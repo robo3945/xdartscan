@@ -113,7 +113,13 @@ void test_and_read_config_file(bool verbose, char *config_dir) {
  * @param param
  */
 void print_help(char *param) {
-    fprintf(stdout, "XDartScan v. 1.2\n");
+    fprintf(stdout, "\n"
+        " __  ______            _   ____                  \n"
+        " \\ \\/ /  _ \\  __ _ _ _| |_/ ___|  ___ __ _ _ __  \n"
+        "  \\  /| | | |/ _` | '__| __\\___ \\ / __/ _` | '_ \\ \n"
+        "  /  \\| |_| | (_| | |  | |_ ___) | (_| (_| | | | |\n"
+        " /_/\\_\\____/ \\__,_|_|   \\__|____/ \\___\\__,_|_| |_|\n"
+        "                                          v. 1.2\n\n");
     fprintf(stdout, "Usage: %s -i <dir_to_scan> -c <config_file_path> -v\n", param);
     fprintf(stdout, "-i <dir_to_scan>\n");
     fprintf(stdout, "-c <config_file_path>\n");

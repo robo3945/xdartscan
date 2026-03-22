@@ -502,11 +502,13 @@ void main_scan(char *root_path, bool verbose) {
 void p_scan_files(const char *base_path, const int indent, const bool verbose) {
     struct dirent *dp;
 
-    // Normalize path on stack instead of heap allocation
+    // Normalize path on the stack instead of heap (malloc/free) to avoid allocation
+    // overhead in the recursive scan loop — this function is called once per directory
     char normalized_path[MAX_PATH_BUFFER];
     size_t base_len = strlen(base_path);
     if (base_len >= MAX_PATH_BUFFER) return;
     memcpy(normalized_path, base_path, base_len + 1);
+    // Strip trailing slash/backslash to ensure consistent path concatenation below
     if (base_len > 0 && (normalized_path[base_len - 1] == '/' || normalized_path[base_len - 1] == '\\')) {
         normalized_path[--base_len] = '\0';
     }
@@ -525,7 +527,8 @@ void p_scan_files(const char *base_path, const int indent, const bool verbose) {
     while ((dp = readdir(dir)) != NULL) {
         const char *name = dp->d_name;
 
-        // Skip "." and ".." entries efficiently
+        // Skip "." and ".." entries by checking raw characters — faster than strcmp/strncmp
+        // since we avoid function call overhead for every directory entry
         if (name[0] == '.') {
             if (name[1] == '\0' || (name[1] == '.' && name[2] == '\0'))
                 continue;
@@ -538,12 +541,15 @@ void p_scan_files(const char *base_path, const int indent, const bool verbose) {
             printf("|- %s ", name);
         }
 
-        // Build path on stack with snprintf
+        // Build child path on the stack with a single snprintf call — replaces the
+        // previous strncpy + strcat approach which required two passes over the string
         char path[MAX_PATH_BUFFER];
         int path_len = snprintf(path, MAX_PATH_BUFFER, "%s/%s", normalized_path, name);
         if (path_len < 0 || path_len >= MAX_PATH_BUFFER) continue;
 
-        // Use d_type to avoid stat() when possible
+        // Use dirent's d_type field to classify entries without a stat() syscall.
+        // On filesystems that support it (ext4, APFS, etc.), this avoids one stat()
+        // per entry, which is a significant speedup on directories with many files.
 #ifdef _DIRENT_HAVE_D_TYPE
         if (dp->d_type == DT_REG) {
             struct stat st;
@@ -585,7 +591,9 @@ void p_scan_file(const char *fullPath, const unsigned long file_size, const bool
     char magic_number_hex_string[MAGIC_NUMBER_BYTE_SIZE * 2 + 1];
     magic_number_hex_string[0] = '\0';
 
-    // Get file timestamps - use separate buffers to avoid ctime() static buffer overwrite
+    // Bug fix: ctime() returns a pointer to a single static buffer, so consecutive
+    // calls overwrite previous results. Using ctime_r() with separate per-timestamp
+    // buffers ensures mtime/ctime/atime are each preserved independently.
     struct stat attr;
     stat(fullPath, &attr);
     char mtime_buf[26], ctime_buf[26], atime_buf[26];
@@ -611,8 +619,10 @@ void p_scan_file(const char *fullPath, const unsigned long file_size, const bool
     } else {
         FILE *fp = fopen(fullPath, "rb");
         if (fp) {
-            // Single read: read enough for both magic number and entropy analysis
-            // Cap read size for entropy to avoid reading huge files entirely
+            // Single-read optimization: one fread serves both magic number extraction
+            // (first 4 bytes) and entropy calculation (full buffer). This halves the
+            // number of read syscalls per file compared to reading magic bytes separately.
+            // Cap at MAX_FILE_SIZE to avoid loading huge files entirely into memory.
             unsigned long read_size = file_length;
             if (read_size > (unsigned long)MAX_FILE_SIZE)
                 read_size = (unsigned long)MAX_FILE_SIZE;
@@ -639,17 +649,20 @@ void p_scan_file(const char *fullPath, const unsigned long file_size, const bool
                 goto report;
             }
 
-            // Extract magic number from already-read buffer (no second read needed)
+            // Extract magic number hex string from the already-read buffer (no second fread)
             sprintf(magic_number_hex_string, "%02x%02x%02x%02x",
                     content[0], content[1], content[2], content[3]);
 
-            // Convert magic number hex to unsigned long once
+            // Convert first 4 bytes to unsigned long via bit-shifting — replaces the
+            // previous strtoul(hex_string, ..., 16) approach, avoiding string parsing
+            // overhead for every single scanned file
             unsigned long magic_ul = ((unsigned long)content[0] << 24) |
                                      ((unsigned long)content[1] << 16) |
                                      ((unsigned long)content[2] << 8) |
                                      (unsigned long)content[3];
 
-            // Try full 4-byte magic number, then 3-byte
+            // Search strategy: try the full 4-byte magic number first, then fall back
+            // to a 3-byte prefix match. This catches signatures shorter than 4 bytes.
             int cont = 0;
             while (!magic_number_found && cont < 2) {
                 unsigned long search_val = magic_ul >> (8 * cont);
@@ -777,17 +790,18 @@ bool has_magic_number_simple(const char *magic_number_string) {
  */
 bool p_binary_search(const unsigned long magic_number, int lower, int upper) {
     while (lower <= upper) {
-        // Previene l'overflow nella somma
+        // Prevent integer overflow when computing midpoint: (lower + upper) could overflow,
+        // but lower + (upper - lower) / 2 is always safe since upper >= lower
         const int mid = lower + ((upper - lower) >> 1);
 
-        // Salva il valore in una variabile locale per evitare accessi multipli all'array
+        // Cache array value in a local variable to avoid repeated memory lookups
         const unsigned long current = g_well_known_mn[mid].number8_ul;
 
         if (current == magic_number)
             return true;
 
-        // Uso di un operatore ternario per rendere il codice più compatto
-        // e potenzialmente permettere migliori ottimizzazioni del compilatore
+        // Branchless-style update: avoids branch misprediction penalty by computing
+        // both paths and selecting the correct one via ternary operator
         lower = current < magic_number ? mid + 1 : lower;
         upper = current < magic_number ? upper : mid - 1;
     }

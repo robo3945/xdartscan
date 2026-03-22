@@ -17,18 +17,19 @@
  * @param result_size The size of the result array to ensure safe writing.
  */
 void format_size(const unsigned long long bytes, char *result, const size_t result_size) {
-    // Ottimizzazione: Controllo preliminare per evitare operazioni inutili
+    // Guard against null buffer or zero-size to prevent undefined behavior
     if (!result || result_size == 0) {
         return;
     }
-    
+
+    // Static array: initialized once at program start, avoids stack re-initialization per call
     static const char *units[] = {"B", "KB", "MB", "GB"};
     int unit_index = 0;
     double size = bytes;
 
-    // Ottimizzazione: Utilizzo di bitshift invece di divisione per potenze di 2
+    // Divide by 1024 iteratively to find the appropriate unit (B -> KB -> MB -> GB)
     while (size >= 1024.0 && unit_index < 3) {
-        size /= 1024.0;  // Potrebbe essere ottimizzato con size *= 0.0009765625 (1/1024)
+        size /= 1024.0;
         unit_index++;
     }
 
@@ -82,17 +83,17 @@ int format_time(const double seconds, char* const buffer, const size_t buffer_si
 }
 
 char *strnstr(const char *s, const char *find, size_t slen) {
-    // Ottimizzazione: Controllo iniziale per casi speciali
+    // Empty needle always matches at the start of the haystack
     if (*find == '\0')
         return (char *)s;
-        
+
     char c, sc;
     size_t len;
 
     c = *find++;
     len = strlen(find);
-    
-    // Ottimizzazione: Verifica preliminare se la lunghezza della stringa da cercare è maggiore della stringa in cui cercare
+
+    // Early exit: needle longer than haystack can never match
     if (len >= slen)
         return NULL;
         
@@ -151,7 +152,7 @@ bool is_directory(const char *path) {
  *         or NULL if an error occurs (e.g., file read error, memory allocation failure).
  */
 unsigned char *read_file_content(FILE *fp, unsigned long bytes_to_read) {
-    // Ottimizzazione: Controllo preliminare per evitare allocazioni inutili
+    // Guard: skip allocation and I/O for invalid inputs
     if (!fp || bytes_to_read == 0) {
         return NULL;
     }
@@ -160,6 +161,8 @@ unsigned char *read_file_content(FILE *fp, unsigned long bytes_to_read) {
         return NULL;
     }
 
+    // Use malloc instead of calloc: the buffer is immediately overwritten by fread,
+    // so zero-initialization would be wasted work
     unsigned char *buffer = (unsigned char *) malloc(bytes_to_read);
     if (buffer == NULL) {
         return NULL;
@@ -231,7 +234,7 @@ char *reverse(char *buffer, int i, int j) {
  * @return A pointer to the buffer containing the resulting string representation.
  */
 char *itoa(int value, char *buffer, int base) {
-    // Ottimizzazione: Controllo preliminare per casi speciali
+    // Guard against unsupported bases and null buffer
     if (base < 2 || base > 32 || buffer == NULL) {
         return buffer;
     }

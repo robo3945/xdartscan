@@ -14,7 +14,7 @@ static FILE *fp_tsv;
 static FILE *fp_txt;
 
 bool create_report_file(char* full_path, int rand, char* ext, bool verbose){
-    // Ottimizzazione: Controllo preliminare per parametri nulli
+    // Early return on invalid input to avoid null pointer dereference
     if (!full_path || !ext) {
         return false;
     }
@@ -30,7 +30,7 @@ bool create_report_file(char* full_path, int rand, char* ext, bool verbose){
         return false;
 
     if ((*fp = fopen(path, "a")) != NULL) {
-        // Set large I/O buffer to reduce system calls
+        // Use 64KB fully-buffered I/O to batch writes and reduce write() syscalls
         setvbuf(*fp, NULL, _IOFBF, 64 * 1024);
         if (verbose) printf("\n%s file created: %s\n\n", ext, path);
         if (strcmp(ext, "tsv") == 0) p_create_header();
@@ -55,8 +55,8 @@ void append_to_report_txt(char* line){
 }
 
 void p_create_header(){
-    // Ottimizzazione: Utilizzo di una stringa costante predefinita invece di sprintf
-    static const char header[] = "PATH\tFILE\tEXT\tEntropy\tMagic Number\tMagic Hex String\tErrs\tHigh Entropy\tAlmost zero\tMin size\tSize\tCTime\tATime\tMTime\tDescription\n";
+    // Pre-defined constant header avoids sprintf formatting overhead on every call
+    static const char header[] = "PATH\tFILE\tEXT\tEntropy\tMagic Number found\tMagic Hex String\tErrs\tHigh Entropy\tAlmost zero\tMin size\tSize\tCTime\tATime\tMTime\tDescription\n";
     append_to_report_tsv((char*)header);
 }
 

@@ -36,7 +36,7 @@ void p_populate_struct(MagicNumber *mn_array);
 int read_config_file(char* filename, const bool verbose) {
     FILE *fp;
     
-    // Ottimizzazione: Confronto delle stringhe più efficiente
+    // Open and parse the INI-style config file
     if ((fp = fopen(filename, "r")) != NULL) {
         printf("\n---------------------------- CONFIG ---------------------------- \n");
         printf("Config path: %s\n\n", filename);
@@ -59,7 +59,7 @@ int read_config_file(char* filename, const bool verbose) {
                     case 1:
                         if (param_name) {
                             param_value = trim(token);
-                            // Ottimizzazione: Utilizzo di strcmp invece di strncmp quando possibile
+                            // Use strcmp for exact key matching (no length limit needed for known keys)
                             if (strcmp(param_name, "ENTROPY_TH") == 0) {
                                 ENTROPY_TH = strtod(param_value, NULL);
                                 verbose?printf("Config param: %s value: \t\t%f\n","ENTROPY_TH",ENTROPY_TH):0;
@@ -131,7 +131,7 @@ void sort_signatures(MagicNumber* mn_array){
     // First of all, trim the signatures to first 4 bytes and converts in unsigned long
     p_populate_struct(mn_array);
 
-    // Use qsort O(n log n) instead of selection sort O(n^2)
+    // Sort signatures using stdlib qsort — O(n log n) vs previous O(n^2) selection sort
     qsort(mn_array, SIGNATURES_VECTOR_LENGTH, sizeof(MagicNumber), compare_magic_numbers);
 
     if (DEBUG_PRINT) {

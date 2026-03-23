@@ -15,6 +15,7 @@ typedef struct GlobalStatsStruct {
     int num_files_with_size_zero_or_less;
     int num_files_with_min_size;
     int num_files_with_errs;
+    int num_files_suspect;
     unsigned long long size_files;
 } GlobStat;
 

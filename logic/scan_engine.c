@@ -683,6 +683,7 @@ void p_scan_file(const char *fullPath, const unsigned long file_size, const bool
 
                 if (H > ENTROPY_TH) {
                     g_stats.num_files_with_high_entropy++;
+                    g_stats.num_files_suspect++;
                     has_high_entropy = true;
                     if (verbose) printf("(high H: %f)", H);
                 } else {

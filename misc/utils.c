@@ -318,6 +318,10 @@ void make_stats(char *root_path, const double time_spent, char *buffer) {
     offset += (written > 0) ? written : 0;
 
     written = snprintf(buffer + offset, MAX_LINE_BUFFER - offset,
+                       "\nNumber of files suspect (maybe crypto):                       %d", g_stats.num_files_suspect);
+    offset += (written > 0) ? written : 0;
+
+    written = snprintf(buffer + offset, MAX_LINE_BUFFER - offset,
                        "\nNumber of files with ERRS:                       %d", g_stats.num_files_with_errs);
     offset += (written > 0) ? written : 0;
 

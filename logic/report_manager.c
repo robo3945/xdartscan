@@ -56,7 +56,7 @@ void append_to_report_txt(char* line){
 
 void p_create_header(){
     // Pre-defined constant header avoids sprintf formatting overhead on every call
-    static const char header[] = "PATH\tFILE\tEXT\tEntropy\tMagic Number found\tMagic Hex String\tErrs\tHigh Entropy\tAlmost zero\tMin size\tSize\tCTime\tATime\tMTime\tDescription\n";
+    static const char header[] = "PATH\tFILE\tEXT\tSuspect\tEntropy\tMagic Number found\tMagic Hex String\tErrs\tHigh Entropy\tAlmost zero\tMin size\tSize\tCTime\tATime\tMTime\tDescription\n";
     append_to_report_tsv((char*)header);
 }
 

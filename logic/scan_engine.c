@@ -742,10 +742,14 @@ void append_line_to_report(const char *fullPath, unsigned long file_length, bool
     const char *p_end_of_file = strrchr(fullPath, '.');
     p_end_of_file ? strncpy(ext, p_end_of_file + 1, MAX_EXT_SIZE) : NULL;
 
-    snprintf(report_line_buffer, MAX_PATH_BUFFER, "%s\t%s\t%s\t%f\t%d\t%s\t%d\t%d\t%d\t%d\t%ld\t%s\t%s\t%s\t%s\n",
+    // Flag files with no recognized magic number and high entropy as potentially encrypted
+    int suspect = (!magic_number_found && has_high_entropy) ? 1 : 0;
+
+    snprintf(report_line_buffer, MAX_PATH_BUFFER, "%s\t%s\t%s\t%d\t%f\t%d\t%s\t%d\t%d\t%d\t%d\t%ld\t%s\t%s\t%s\t%s\n",
             fullPath,
             file_name,
             ext,
+            suspect,
             H,
             magic_number_found,
             magic_number_hex_string,
@@ -758,6 +762,7 @@ void append_line_to_report(const char *fullPath, unsigned long file_length, bool
             atime_s,
             mtime_s,
             err_description);
+
     append_to_report_tsv(report_line_buffer);
 }
 

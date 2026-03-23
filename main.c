@@ -3,12 +3,14 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <locale.h>
+#include <string.h>
+#include <glob.h>
 #include "headers/scan_engine.h"
 #include "headers/config_manager.h"
 #include "headers/utils.h"
 
 void print_help(char* param);
-
+void clean_reports(void);
 void test_and_read_config_file(bool verbose, char *config_dir);
 
 /**
@@ -35,6 +37,14 @@ int main(int argc, char *argv[])
     bool not_close_terminal_window = false;
     char* input_dir = NULL;
     char* config_dir = NULL;
+    // Handle long-style -clean argument before getopt
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-clean") == 0) {
+            clean_reports();
+            exit(EXIT_SUCCESS);
+        }
+    }
+
     if (argc >1)
         while ((opt = getopt(argc, argv, "hvxi:c:")) != -1) {
             switch (opt) {
@@ -125,6 +135,32 @@ void print_help(char *param) {
     fprintf(stdout, "-c <config_file_path>\n");
     fprintf(stdout, "-v: verbose mode\n");
     fprintf(stdout, "-x: not close terminal\n");
+    fprintf(stdout, "-clean: delete all report and stats files in the current directory\n");
+}
+
+/**
+ * Deletes all report (report*.tsv) and stats (stats*.txt) files in the current directory.
+ */
+void clean_reports(void) {
+    glob_t g;
+    int count = 0;
+    const char *patterns[] = {"./report*.tsv", "./stats*.txt"};
+
+    for (int i = 0; i < 2; i++) {
+        if (glob(patterns[i], 0, NULL, &g) == 0) {
+            for (size_t j = 0; j < g.gl_pathc; j++) {
+                if (remove(g.gl_pathv[j]) == 0) {
+                    printf("Deleted: %s\n", g.gl_pathv[j]);
+                    count++;
+                } else {
+                    fprintf(stderr, "Failed to delete: %s\n", g.gl_pathv[j]);
+                }
+            }
+            globfree(&g);
+        }
+    }
+
+    printf("%d file(s) deleted.\n", count);
 }
 
 

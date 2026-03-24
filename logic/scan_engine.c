@@ -1,3 +1,7 @@
+/* Enable POSIX thread-safe functions (ctime_r, etc.) on MinGW/Windows */
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200112L
+#endif
 #include <dirent.h>
 #include <string.h>
 #include <stdlib.h>

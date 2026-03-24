@@ -4,7 +4,11 @@
 #include <stdbool.h>
 #include <locale.h>
 #include <string.h>
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <glob.h>
+#endif
 #include "headers/scan_engine.h"
 #include "headers/config_manager.h"
 #include "headers/utils.h"
@@ -142,10 +146,30 @@ void print_help(char *param) {
  * Deletes all report (report*.tsv) and stats (stats*.txt) files in the current directory.
  */
 void clean_reports(void) {
-    glob_t g;
     int count = 0;
-    const char *patterns[] = {"./report*.tsv", "./stats*.txt"};
 
+#ifdef _WIN32
+    const char *patterns[] = {".\\report*.tsv", ".\\stats*.txt"};
+    for (int i = 0; i < 2; i++) {
+        WIN32_FIND_DATAA fd;
+        HANDLE h = FindFirstFileA(patterns[i], &fd);
+        if (h != INVALID_HANDLE_VALUE) {
+            do {
+                char path[MAX_PATH];
+                snprintf(path, sizeof(path), ".\\%s", fd.cFileName);
+                if (remove(path) == 0) {
+                    printf("Deleted: %s\n", path);
+                    count++;
+                } else {
+                    fprintf(stderr, "Failed to delete: %s\n", path);
+                }
+            } while (FindNextFileA(h, &fd));
+            FindClose(h);
+        }
+    }
+#else
+    glob_t g;
+    const char *patterns[] = {"./report*.tsv", "./stats*.txt"};
     for (int i = 0; i < 2; i++) {
         if (glob(patterns[i], 0, NULL, &g) == 0) {
             for (size_t j = 0; j < g.gl_pathc; j++) {
@@ -159,6 +183,7 @@ void clean_reports(void) {
             globfree(&g);
         }
     }
+#endif
 
     printf("%d file(s) deleted.\n", count);
 }

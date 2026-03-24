@@ -1,5 +1,27 @@
 # XDartScan - Worklog
 
+## 2026-03-24 - Windows (MinGW) build fixes
+
+### Goal
+Fix compilation failures on Windows with MinGW introduced by recent changes.
+
+### Changes
+
+#### `main.c`
+- **`glob.h` not available in MinGW**: replaced unconditional `#include <glob.h>` with `#ifdef _WIN32 / #include <windows.h> / #else / #include <glob.h> / #endif`.
+- **`clean_reports()`**: reimplemented with `#ifdef _WIN32` branch using `FindFirstFileA`/`FindNextFileA`/`FindClose` (Win32 API), and `#else` branch keeping the existing `glob()`/`globfree()` POSIX implementation.
+
+#### `misc/utils.c`
+- **Removed unused `#include <dirent.h>`**: the header was included but none of the functions in `utils.c` use `dirent` types or functions. Removing it avoids unnecessary POSIX dependency.
+
+#### `logic/scan_engine.c`
+- **Added `_POSIX_C_SOURCE` define**: `ctime_r()` in MinGW's `time.h` is guarded by `#if defined(_POSIX_C_SOURCE)`. Without this define, compiling with `-std=gnu99` causes an implicit declaration warning. Added `#ifndef _POSIX_C_SOURCE / #define _POSIX_C_SOURCE 200112L / #endif` before the includes.
+
+### Root cause
+The commit `da8ffac "Add -clean CLI option"` introduced `#include <glob.h>` which is a POSIX header absent from MinGW's headers. This caused a build failure on Windows for all translation units that transitively pulled in affected headers.
+
+---
+
 ## 2026-03-21 - Performance optimizations and bug fixes
 
 ### Goal

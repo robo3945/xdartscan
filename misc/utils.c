@@ -1,7 +1,6 @@
 #include "../headers/utils.h"
 #include "../headers/config.h"
 
-#include <dirent.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>

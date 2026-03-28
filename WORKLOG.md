@@ -1,5 +1,57 @@
 # XDartScan - Worklog
 
+## 2026-03-24 - Multithreaded file scanning (producer-consumer thread pool)
+
+### Goal
+Parallelise file scanning to exploit multi-core CPUs, reducing elapsed time on large directory trees.
+
+### Architecture
+
+Producer-consumer pattern with a bounded ring-buffer work queue:
+
+```
+main_scan()
+  ├─ Initialise work queue (WORK_QUEUE_CAP=512 items)
+  ├─ Launch NUM_THREADS worker threads
+  │
+  ├─ p_scan_files() [producer, single thread]
+  │   └─ Traverses directories; for each regular file → wq_push(path, size)
+  │
+  ├─ Signal producer_done → workers drain queue and exit
+  └─ pthread_join() all workers → make_stats() → close_file()
+```
+
+Each worker thread calls `p_scan_file()`, which now consolidates all `g_stats` updates into **one** locked critical section at the `report:` label, and wraps `append_line_to_report()` in a separate `g_report_mutex` lock.
+
+### Files changed
+
+#### `logic/scan_engine.c`
+- Added `#include <pthread.h>` and `WorkItem`/`WorkQueue` types.
+- Added `g_stats_mutex`, `g_report_mutex` (static, PTHREAD_MUTEX_INITIALIZER), `g_wq`, `g_verbose_flag` globals.
+- `main_scan()`: initialises/destroys queue, spawns/joins `NUM_THREADS` workers.
+- `p_scan_files()`: removed `g_stats.num_files++`; replaced `p_scan_file()` calls with `wq_push()`.
+- `p_scan_file()`: removed all inline `g_stats.xxx++` from the function body; added single locked stats block + locked report write at `report:` label.
+- New `wq_push()`: blocks when queue full (`pthread_cond_wait not_full`).
+- New `p_worker_thread()`: dequeues and calls `p_scan_file()`; exits when queue empty and `producer_done`.
+
+#### `headers/config.h`
+- Added `extern int NUM_THREADS;`.
+
+#### `logic/config_manager.c`
+- Added `int NUM_THREADS = 4;` default.
+- Parses `NUM_THREADS` from config.ini (minimum 1).
+
+#### `misc/utils.c`
+- `make_stats()`: added `NUM_THREADS` line in CONFIG section of stats output.
+
+#### `config.ini`
+- Added `NUM_THREADS=4`.
+
+#### `CMakeLists.txt`
+- Added `target_link_libraries(xdartscan pthread)`.
+
+---
+
 ## 2026-03-24 - Windows (MinGW) build fixes
 
 ### Goal

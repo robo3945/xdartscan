@@ -6,6 +6,7 @@ extern int DEBUG_PRINT;
 extern int THROUGHPUT_TEST;
 extern int MIN_FILE_SIZE;
 extern int MAX_FILE_SIZE;
+extern int NUM_THREADS;
 
 typedef struct GlobalStatsStruct {
     int num_files;

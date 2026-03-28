@@ -2,6 +2,7 @@
 #ifndef _POSIX_C_SOURCE
 #define _POSIX_C_SOURCE 200112L
 #endif
+#include <pthread.h>
 #include <dirent.h>
 #include <string.h>
 #include <stdlib.h>
@@ -19,11 +20,36 @@
 #define MAGIC_NUMBER_BYTE_SIZE 4
 #define SCAN_READ_BUF_SIZE (64 * 1024)
 
+/* ── Thread-pool / work-queue ──────────────────────────────────────────── */
+#define WORK_QUEUE_CAP 512
+
+typedef struct {
+    char          path[MAX_PATH_BUFFER];
+    unsigned long size;
+} WorkItem;
+
+typedef struct {
+    WorkItem       *items;
+    int             head, tail, count;
+    bool            producer_done;
+    pthread_mutex_t mutex;
+    pthread_cond_t  not_empty;
+    pthread_cond_t  not_full;
+} WorkQueue;
+
+static WorkQueue       g_wq;
+static pthread_mutex_t g_stats_mutex  = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t g_report_mutex = PTHREAD_MUTEX_INITIALIZER;
+static bool            g_verbose_flag;
+
 bool p_binary_search(unsigned long magic_number, int lower, int upper);
 
 void p_scan_file(const char *fullPath, unsigned long file_size, bool verbose);
 
 void p_scan_files(const char *base_path, int indent, bool verbose);
+
+static void   wq_push(const char *path, unsigned long size);
+static void  *p_worker_thread(void *arg);
 
 void append_line_to_report(const char *fullPath, unsigned long file_length, bool magic_number_found,
                            bool has_high_entropy,
@@ -463,26 +489,54 @@ void main_scan(char *root_path, bool verbose) {
     struct timespec start, end;
     clock_gettime(CLOCK_REALTIME, &start);
 
-    // prepare the Signatures
+    g_verbose_flag = verbose;
+
+    // Prepare signatures (read-only after this point)
     sort_signatures(g_well_known_mn);
 
-    // creates the CSV file: open it
+    // Create report files
     srand(time(NULL));
     const int r = rand();
     if (!create_report_file("./report", r, "tsv", verbose))
         fprintf(stderr, "CSV file output problem\n");
-
     if (!create_report_file("./stats", r, "txt", verbose))
         fprintf(stderr, "CSV file output problem\n");
 
-    // start the scanning
+    // Initialise work queue
+    g_wq.items = malloc(sizeof(WorkItem) * WORK_QUEUE_CAP);
+    g_wq.head = g_wq.tail = g_wq.count = 0;
+    g_wq.producer_done = false;
+    pthread_mutex_init(&g_wq.mutex,    NULL);
+    pthread_cond_init (&g_wq.not_empty, NULL);
+    pthread_cond_init (&g_wq.not_full,  NULL);
+
+    // Launch worker threads
+    const int num_threads = NUM_THREADS > 0 ? NUM_THREADS : 4;
+    pthread_t *threads = malloc(sizeof(pthread_t) * (size_t)num_threads);
+    for (int i = 0; i < num_threads; i++)
+        pthread_create(&threads[i], NULL, p_worker_thread, NULL);
+
+    // Producer: traverse directories and push file paths to the queue
     printf("+ %s", root_path);
     p_scan_files(root_path, 2, verbose);
 
+    // Signal end-of-production to all workers
+    pthread_mutex_lock(&g_wq.mutex);
+    g_wq.producer_done = true;
+    pthread_cond_broadcast(&g_wq.not_empty);
+    pthread_mutex_unlock(&g_wq.mutex);
+
+    // Wait for all workers to drain the queue
+    for (int i = 0; i < num_threads; i++)
+        pthread_join(threads[i], NULL);
+
+    free(threads);
+    free(g_wq.items);
+    pthread_mutex_destroy(&g_wq.mutex);
+    pthread_cond_destroy (&g_wq.not_empty);
+    pthread_cond_destroy (&g_wq.not_full);
 
     clock_gettime(CLOCK_REALTIME, &end);
-
-    // time_spent = end - start
     const double time_spent = end.tv_sec - start.tv_sec + (end.tv_nsec - start.tv_nsec) / BILLION;
 
     char buffer[MAX_STATS_BUFFER];
@@ -521,10 +575,8 @@ void p_scan_files(const char *base_path, const int indent, const bool verbose) {
 
     if (dir == NULL) {
         struct stat st;
-        if (stat(normalized_path, &st) == 0 && S_ISREG(st.st_mode)) {
-            g_stats.num_files++;
-            p_scan_file(normalized_path, st.st_size, verbose);
-        }
+        if (stat(normalized_path, &st) == 0 && S_ISREG(st.st_mode))
+            wq_push(normalized_path, (unsigned long)st.st_size);
         return;
     }
 
@@ -557,10 +609,8 @@ void p_scan_files(const char *base_path, const int indent, const bool verbose) {
 #ifdef _DIRENT_HAVE_D_TYPE
         if (dp->d_type == DT_REG) {
             struct stat st;
-            if (stat(path, &st) == 0) {
-                g_stats.num_files++;
-                p_scan_file(path, st.st_size, verbose);
-            }
+            if (stat(path, &st) == 0)
+                wq_push(path, (unsigned long)st.st_size);
         } else if (dp->d_type == DT_DIR) {
             p_scan_files(path, indent + 2, verbose);
         } else {
@@ -572,6 +622,48 @@ void p_scan_files(const char *base_path, const int indent, const bool verbose) {
 #endif
     }
     closedir(dir);
+}
+
+/**
+ * Push a file path+size onto the work queue, blocking when the queue is full.
+ */
+static void wq_push(const char *path, unsigned long size) {
+    pthread_mutex_lock(&g_wq.mutex);
+    while (g_wq.count == WORK_QUEUE_CAP)
+        pthread_cond_wait(&g_wq.not_full, &g_wq.mutex);
+    WorkItem *item = &g_wq.items[g_wq.tail];
+    strncpy(item->path, path, MAX_PATH_BUFFER - 1);
+    item->path[MAX_PATH_BUFFER - 1] = '\0';
+    item->size = size;
+    g_wq.tail  = (g_wq.tail + 1) % WORK_QUEUE_CAP;
+    g_wq.count++;
+    pthread_cond_signal(&g_wq.not_empty);
+    pthread_mutex_unlock(&g_wq.mutex);
+}
+
+/**
+ * Worker thread: continuously dequeues WorkItems and calls p_scan_file() until
+ * the queue is empty and the producer has finished.
+ */
+static void *p_worker_thread(void *arg) {
+    (void)arg;
+    for (;;) {
+        pthread_mutex_lock(&g_wq.mutex);
+        while (g_wq.count == 0 && !g_wq.producer_done)
+            pthread_cond_wait(&g_wq.not_empty, &g_wq.mutex);
+        if (g_wq.count == 0 && g_wq.producer_done) {
+            pthread_mutex_unlock(&g_wq.mutex);
+            break;
+        }
+        WorkItem item = g_wq.items[g_wq.head];
+        g_wq.head  = (g_wq.head + 1) % WORK_QUEUE_CAP;
+        g_wq.count--;
+        pthread_cond_signal(&g_wq.not_full);
+        pthread_mutex_unlock(&g_wq.mutex);
+
+        p_scan_file(item.path, item.size, g_verbose_flag);
+    }
+    return NULL;
 }
 
 /**
@@ -614,10 +706,8 @@ void p_scan_file(const char *fullPath, const unsigned long file_size, const bool
     // exit for file too small
     if (file_length < MAGIC_NUMBER_BYTE_SIZE || file_length < MIN_FILE_SIZE) {
         if (file_length < MAGIC_NUMBER_BYTE_SIZE) {
-            g_stats.num_files_with_size_zero_or_less++;
             has_size_zero_or_less = true;
         } else if (file_length < MIN_FILE_SIZE) {
-            g_stats.num_files_with_min_size++;
             has_min_size = true;
         }
     } else {
@@ -634,7 +724,6 @@ void p_scan_file(const char *fullPath, const unsigned long file_size, const bool
             unsigned char *content = (unsigned char *)malloc(read_size);
             if (content == NULL) {
                 has_errs = true;
-                g_stats.num_files_with_errs++;
                 snprintf(err_description, sizeof(err_description), "Memory allocation failed for: %s", fullPath);
                 fprintf(stderr, "\n%s", err_description);
                 fclose(fp);
@@ -646,7 +735,6 @@ void p_scan_file(const char *fullPath, const unsigned long file_size, const bool
 
             if (bytes_read < MAGIC_NUMBER_BYTE_SIZE) {
                 has_errs = true;
-                g_stats.num_files_with_errs++;
                 snprintf(err_description, sizeof(err_description), "Read error in: %s", fullPath);
                 fprintf(stderr, "\n%s", err_description);
                 free(content);
@@ -674,7 +762,6 @@ void p_scan_file(const char *fullPath, const unsigned long file_size, const bool
 
                 if (magic_number_found) {
                     if (verbose) printf("(magic found: %s)", magic_number_hex_string);
-                    g_stats.num_files_with_well_known_magic_number++;
                 }
 
                 magic_number_hex_string[8 - 2 * (++cont)] = 0;
@@ -686,20 +773,16 @@ void p_scan_file(const char *fullPath, const unsigned long file_size, const bool
                 }
 
                 if (H > ENTROPY_TH) {
-                    g_stats.num_files_with_high_entropy++;
-                    g_stats.num_files_suspect++;
                     has_high_entropy = true;
                     if (verbose) printf("(high H: %f)", H);
                 } else {
                     if (verbose) printf("(low H: %f)", H);
-                    g_stats.num_files_with_low_entropy++;
                 }
             }
 
             free(content);
         } else {
             has_errs = true;
-            g_stats.num_files_with_errs++;
             snprintf(err_description, sizeof(err_description), "Cannot open the file: %s", fullPath);
             fprintf(stderr, "\n%s", err_description);
         }
@@ -707,11 +790,27 @@ void p_scan_file(const char *fullPath, const unsigned long file_size, const bool
 
 report:
     if (verbose) printf(" - l: %lu", file_length);
-    g_stats.size_files += file_length;
 
+    // Single locked block: all g_stats updates are consolidated here to minimise
+    // mutex acquisitions per file and keep all counter writes in one critical section.
+    pthread_mutex_lock(&g_stats_mutex);
+    g_stats.num_files++;
+    g_stats.size_files += file_length;
+    if (has_size_zero_or_less)          g_stats.num_files_with_size_zero_or_less++;
+    if (has_min_size)                   g_stats.num_files_with_min_size++;
+    if (has_errs)                       g_stats.num_files_with_errs++;
+    if (magic_number_found)             g_stats.num_files_with_well_known_magic_number++;
+    if (has_high_entropy)             { g_stats.num_files_with_high_entropy++;
+                                        g_stats.num_files_suspect++; }
+    if (!magic_number_found && H >= 0 && !has_high_entropy)
+                                        g_stats.num_files_with_low_entropy++;
+    pthread_mutex_unlock(&g_stats_mutex);
+
+    pthread_mutex_lock(&g_report_mutex);
     append_line_to_report(fullPath, file_length, magic_number_found, has_high_entropy, has_size_zero_or_less,
                           has_min_size, has_errs,
                           err_description, H, report_line_buffer, magic_number_hex_string, mtime_buf, ctime_buf, atime_buf);
+    pthread_mutex_unlock(&g_report_mutex);
 }
 
 /**

@@ -16,6 +16,7 @@ int DEBUG_PRINT=1;
 int THROUGHPUT_TEST=0;
 int MIN_FILE_SIZE=500; //bytes
 int MAX_FILE_SIZE=10000000; //bytes
+int NUM_THREADS=4;
 
 // Definition for global g_stats
 GlobStat g_stats = {};
@@ -80,6 +81,11 @@ int read_config_file(char* filename, const bool verbose) {
                             else if (strncmp(param_name, "MAX_FILE_SIZE", MAX_FILE_SIZE - 1) == 0) {
                                 MAX_FILE_SIZE = (int) strtol(param_value, NULL, 10);
                                 verbose?printf("Config param: %s value: \t\t%d\n","MAX_FILE_SIZE",MAX_FILE_SIZE):0;
+                            }
+                            else if (strcmp(param_name, "NUM_THREADS") == 0) {
+                                NUM_THREADS = (int) strtol(param_value, NULL, 10);
+                                if (NUM_THREADS < 1) NUM_THREADS = 1;
+                                verbose?printf("Config param: %s value: \t\t%d\n","NUM_THREADS",NUM_THREADS):0;
                             }
 
                         }

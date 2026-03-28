@@ -374,6 +374,9 @@ void make_stats(char *root_path, const double time_spent, char *buffer) {
     written = snprintf(buffer + offset, MAX_LINE_BUFFER - offset, "\nConfig param: %s value: \t\t%d","MAX_FILE_SIZE",MAX_FILE_SIZE);
     offset += (written > 0) ? written : 0;
 
+    written = snprintf(buffer + offset, MAX_LINE_BUFFER - offset, "\nConfig param: %s value: \t\t%d","NUM_THREADS",NUM_THREADS);
+    offset += (written > 0) ? written : 0;
+
     written = snprintf(buffer + offset, MAX_LINE_BUFFER - offset,
                        "\n---------------------------- ***** ----------------------------");
     offset += (written > 0) ? written : 0;

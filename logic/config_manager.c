@@ -17,6 +17,7 @@ int THROUGHPUT_TEST=0;
 int MIN_FILE_SIZE=500; //bytes
 int MAX_FILE_SIZE=10000000; //bytes
 int NUM_THREADS=4;
+static bool g_num_threads_set_from_cli = false;
 
 // Definition for global g_stats
 GlobStat g_stats = {};
@@ -82,7 +83,7 @@ int read_config_file(char* filename, const bool verbose) {
                                 MAX_FILE_SIZE = (int) strtol(param_value, NULL, 10);
                                 verbose?printf("Config param: %s value: \t\t%d\n","MAX_FILE_SIZE",MAX_FILE_SIZE):0;
                             }
-                            else if (strcmp(param_name, "NUM_THREADS") == 0) {
+                            else if (strcmp(param_name, "NUM_THREADS") == 0 && !g_num_threads_set_from_cli) {
                                 NUM_THREADS = (int) strtol(param_value, NULL, 10);
                                 if (NUM_THREADS < 1) NUM_THREADS = 1;
                                 verbose?printf("Config param: %s value: \t\t%d\n","NUM_THREADS",NUM_THREADS):0;
@@ -117,6 +118,16 @@ int read_config_file(char* filename, const bool verbose) {
     }
 
     return 0;
+}
+
+/**
+ * Marks NUM_THREADS as set from CLI so config parsing will skip it.
+ * This ensures CLI value takes precedence over config.ini.
+ */
+void set_num_threads_from_cli(int value) {
+    NUM_THREADS = value;
+    if (NUM_THREADS < 1) NUM_THREADS = 1;
+    g_num_threads_set_from_cli = true;
 }
 
 static int compare_magic_numbers(const void *a, const void *b) {

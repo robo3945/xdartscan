@@ -11,6 +11,7 @@
 #endif
 #include "headers/scan_engine.h"
 #include "headers/config_manager.h"
+#include "headers/config.h"
 #include "headers/utils.h"
 
 void print_help(char* param);
@@ -50,7 +51,7 @@ int main(int argc, char *argv[])
     }
 
     if (argc >1)
-        while ((opt = getopt(argc, argv, "hvxi:c:")) != -1) {
+        while ((opt = getopt(argc, argv, "hvxi:c:t:")) != -1) {
             switch (opt) {
                 case 'v':
                     verbose = true;
@@ -63,6 +64,9 @@ int main(int argc, char *argv[])
                     continue;
                 case 'c':
                     config_dir = optarg;
+                    continue;
+                case 't':
+                    set_num_threads_from_cli((int) strtol(optarg, NULL, 10));
                     continue;
                 case 'h':
                     print_help(argv[0]);
@@ -82,6 +86,7 @@ int main(int argc, char *argv[])
         print_help(argv[0]);
 
         test_and_read_config_file(verbose, config_dir);
+        // CLI value takes precedence over config.ini
         main_scan(input_dir, verbose);
 
         if (verbose) {
@@ -139,6 +144,7 @@ void print_help(char *param) {
     fprintf(stdout, "-c <config_file_path>\n");
     fprintf(stdout, "-v: verbose mode\n");
     fprintf(stdout, "-x: not close terminal\n");
+    fprintf(stdout, "-t <n_threads>: set number of worker threads (overrides config.ini)\n");
     fprintf(stdout, "-clean: delete all report and stats files in the current directory\n");
 }
 

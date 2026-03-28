@@ -8,6 +8,9 @@ extern int MIN_FILE_SIZE;
 extern int MAX_FILE_SIZE;
 extern int NUM_THREADS;
 
+// Function to mark NUM_THREADS as set from CLI (config parsing will skip it then)
+void set_num_threads_from_cli(int value);
+
 typedef struct GlobalStatsStruct {
     int num_files;
     int num_files_with_high_entropy;

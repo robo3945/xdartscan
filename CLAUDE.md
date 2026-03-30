@@ -12,14 +12,23 @@ XDartScan is a C99 scanner that detects encrypted/suspicious files by analyzing 
 # Configure and build (Debug)
 cmake -B cmake-build-debug -DCMAKE_BUILD_TYPE=Debug && cmake --build cmake-build-debug
 
-# Quick compile without CMake
-cc -std=c99 -Wall -Wextra -o /tmp/xdartscan main.c logic/scan_engine.c logic/random_test.c logic/config_manager.c logic/report_manager.c misc/utils.c -lm
+# Configure and build (Release)
+cmake -B cmake-build-release -DCMAKE_BUILD_TYPE=Release && cmake --build cmake-build-release
 
-# Run tests
+# Quick compile without CMake (links pthread on Linux; omit -lpthread on macOS)
+cc -std=c99 -Wall -Wextra -o /tmp/xdartscan main.c logic/scan_engine.c logic/random_test.c logic/config_manager.c logic/report_manager.c misc/utils.c -lm -lpthread
+
+# Run all tests
 cd cmake-build-debug && ctest -V
 
+# Run a single test by name
+cd cmake-build-debug && ctest -V -R test_signatures
+
 # Run the scanner
-./cmake-build-debug/xdartscan -i <dir_to_scan> -c config.ini -v
+./cmake-build-debug/xdartscan -i <dir_to_scan> -c config.ini -v -t 8
+
+# Delete all report*.tsv and stats*.txt files in the current directory
+./cmake-build-debug/xdartscan -clean
 ```
 
 ## Architecture
@@ -43,11 +52,14 @@ headers/                → All .h files; key types: MagicNumber (file_signature
 - **`d_type` fast-path**: on systems with `_DIRENT_HAVE_D_TYPE`, file vs directory is resolved without `stat()`.
 - **Signatures**: 397 entries in `g_well_known_mn[]` (file_signatures.h), sorted at startup by `qsort`, searched by `p_binary_search()`. Matching tries 4-byte then 3-byte prefixes.
 - **Entropy cap**: files larger than `MAX_FILE_SIZE` (config.ini, default 10MB) are only partially read for entropy.
+- **Multithreaded scanning**: producer-consumer pattern with a bounded ring-buffer (`WORK_QUEUE_CAP=512`). `p_scan_files()` is the sole producer; `NUM_THREADS` worker threads call `p_scan_file()`. Stats updates and report writes are each protected by a dedicated mutex (`g_stats_mutex`, `g_report_mutex`). `-t <n>` CLI flag overrides `NUM_THREADS` from config.ini.
 - **Thread safety**: `ctime_r()` with separate buffers for mtime/ctime/atime timestamps.
 
 ## Configuration (config.ini)
 
-`ENTROPY_TH` (default 7.99), `MIN_FILE_SIZE` (4000), `MAX_FILE_SIZE` (10000000), `DEBUG_PRINT`, `THROUGHPUT_TEST` — all parsed as key=value pairs.
+`ENTROPY_TH` (default 7.99), `MIN_FILE_SIZE` (4000), `MAX_FILE_SIZE` (10000000), `DEBUG_PRINT`, `THROUGHPUT_TEST`, `NUM_THREADS` (default 4) — all parsed as key=value pairs.
+
+Note: `ENTROPY_TH` uses a comma as decimal separator in config.ini (`7,99`) — this is locale-dependent. The CLI `-t` flag takes precedence over `NUM_THREADS` from config.ini.
 
 ## Worklog
 

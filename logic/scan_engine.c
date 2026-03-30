@@ -849,6 +849,9 @@ void append_line_to_report(const char *fullPath, unsigned long file_length, bool
     // Flag files with no recognized magic number and high entropy as potentially encrypted
     int suspect = (!magic_number_found && has_high_entropy) ? 1 : 0;
 
+    if (suspect)
+        printf("\n  [SUSPECT] %s (H: %f)", fullPath, H);
+
     snprintf(report_line_buffer, MAX_PATH_BUFFER, "%s\t%s\t%s\t%d\t%f\t%d\t%s\t%d\t%d\t%d\t%d\t%ld\t%s\t%s\t%s\t%s\n",
             fullPath,
             file_name,

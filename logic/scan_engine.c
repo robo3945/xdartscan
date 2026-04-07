@@ -713,48 +713,26 @@ void p_scan_file(const char *fullPath, const unsigned long file_size, const bool
     } else {
         FILE *fp = fopen(fullPath, "rb");
         if (fp) {
-            // Single-read optimization: one fread serves both magic number extraction
-            // (first 4 bytes) and entropy calculation (full buffer). This halves the
-            // number of read syscalls per file compared to reading magic bytes separately.
-            // Cap at MAX_FILE_SIZE to avoid loading huge files entirely into memory.
-            unsigned long read_size = file_length;
-            if (read_size > (unsigned long)MAX_FILE_SIZE)
-                read_size = (unsigned long)MAX_FILE_SIZE;
-
-            unsigned char *content = (unsigned char *)malloc(read_size);
-            if (content == NULL) {
+            unsigned char magic_buf[MAGIC_NUMBER_BYTE_SIZE];
+            size_t bytes_read = fread(magic_buf, 1, MAGIC_NUMBER_BYTE_SIZE, fp);
+            
+            if (bytes_read < MAGIC_NUMBER_BYTE_SIZE) {
                 has_errs = true;
-                snprintf(err_description, sizeof(err_description), "Memory allocation failed for: %s", fullPath);
+                snprintf(err_description, sizeof(err_description), "Read error in: %s", fullPath);
                 fprintf(stderr, "\n%s", err_description);
                 fclose(fp);
                 goto report;
             }
 
-            size_t bytes_read = fread(content, 1, read_size, fp);
-            fclose(fp);
-
-            if (bytes_read < MAGIC_NUMBER_BYTE_SIZE) {
-                has_errs = true;
-                snprintf(err_description, sizeof(err_description), "Read error in: %s", fullPath);
-                fprintf(stderr, "\n%s", err_description);
-                free(content);
-                goto report;
-            }
-
-            // Extract magic number hex string from the already-read buffer (no second fread)
+            // Extract magic number hex string
             sprintf(magic_number_hex_string, "%02x%02x%02x%02x",
-                    content[0], content[1], content[2], content[3]);
+                    magic_buf[0], magic_buf[1], magic_buf[2], magic_buf[3]);
 
-            // Convert first 4 bytes to unsigned long via bit-shifting — replaces the
-            // previous strtoul(hex_string, ..., 16) approach, avoiding string parsing
-            // overhead for every single scanned file
-            unsigned long magic_ul = ((unsigned long)content[0] << 24) |
-                                     ((unsigned long)content[1] << 16) |
-                                     ((unsigned long)content[2] << 8) |
-                                     (unsigned long)content[3];
+            unsigned long magic_ul = ((unsigned long)magic_buf[0] << 24) |
+                                     ((unsigned long)magic_buf[1] << 16) |
+                                     ((unsigned long)magic_buf[2] << 8) |
+                                     (unsigned long)magic_buf[3];
 
-            // Search strategy: try the full 4-byte magic number first, then fall back
-            // to a 3-byte prefix match. This catches signatures shorter than 4 bytes.
             int cont = 0;
             while (!magic_number_found && cont < 2) {
                 unsigned long search_val = magic_ul >> (8 * cont);
@@ -769,7 +747,26 @@ void p_scan_file(const char *fullPath, const unsigned long file_size, const bool
 
             if (!magic_number_found) {
                 if (file_length > MIN_FILE_SIZE && !THROUGHPUT_TEST) {
-                    H = calc_rand_idx(content, bytes_read);
+                    unsigned long read_size = file_length;
+                    if (read_size > (unsigned long)MAX_FILE_SIZE)
+                        read_size = (unsigned long)MAX_FILE_SIZE;
+
+                    unsigned char *content = (unsigned char *)malloc(read_size);
+                    if (content == NULL) {
+                        has_errs = true;
+                        snprintf(err_description, sizeof(err_description), "Memory allocation failed for: %s", fullPath);
+                        fprintf(stderr, "\n%s", err_description);
+                    } else {
+                        // Copy the 4 bytes already read
+                        memcpy(content, magic_buf, MAGIC_NUMBER_BYTE_SIZE);
+                        size_t remaining_to_read = read_size - MAGIC_NUMBER_BYTE_SIZE;
+                        size_t total_read = MAGIC_NUMBER_BYTE_SIZE;
+                        if (remaining_to_read > 0) {
+                            total_read += fread(content + MAGIC_NUMBER_BYTE_SIZE, 1, remaining_to_read, fp);
+                        }
+                        H = calc_rand_idx(content, total_read);
+                        free(content);
+                    }
                 }
 
                 if (H > ENTROPY_TH) {
@@ -780,7 +777,7 @@ void p_scan_file(const char *fullPath, const unsigned long file_size, const bool
                 }
             }
 
-            free(content);
+            fclose(fp);
         } else {
             has_errs = true;
             snprintf(err_description, sizeof(err_description), "Cannot open the file: %s", fullPath);

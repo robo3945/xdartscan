@@ -1,5 +1,17 @@
 # XDartScan - Worklog
 
+## 2026-04-07 - Two-phase read optimization
+
+### Goal
+Optimize file scanning by avoiding eager reading and memory allocation for files with known magic numbers.
+
+### Changes
+#### `logic/scan_engine.c`
+- **Two-phase read**: Changed `p_scan_file()` to initially read only the first 4 bytes for magic number extraction. If a known magic number is found, the file is immediately closed, avoiding unnecessary I/O and memory allocation for the rest of the file.
+- **Lazy memory allocation**: The buffer for entropy calculation is now dynamically allocated only if the file is deemed suspicious (i.e. its magic number is not recognized). This dramatically reduces heap contention and I/O in a multi-threaded context.
+
+---
+
 ## 2026-03-24 - Multithreaded file scanning (producer-consumer thread pool)
 
 ### Goal

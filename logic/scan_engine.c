@@ -485,9 +485,10 @@ MagicNumber g_well_known_mn[] = {
  *                  enabled. If true, detailed progress and error information
  *                  will be displayed.
  */
-void main_scan(char *root_path, bool verbose) {
+void main_scan(char *root_path, bool verbose, const char *json_path) {
     struct timespec start, end;
     clock_gettime(CLOCK_REALTIME, &start);
+    const time_t scan_ts = time(NULL);
 
     g_verbose_flag = verbose;
 
@@ -495,12 +496,14 @@ void main_scan(char *root_path, bool verbose) {
     sort_signatures(g_well_known_mn);
 
     // Create report files
-    srand(time(NULL));
+    srand((unsigned int)scan_ts);
     const int r = rand();
     if (!create_report_file("./report", r, "tsv", verbose))
         fprintf(stderr, "CSV file output problem\n");
     if (!create_report_file("./stats", r, "txt", verbose))
         fprintf(stderr, "CSV file output problem\n");
+    if (json_path && !open_json_report(json_path, verbose))
+        fprintf(stderr, "JSON file output problem\n");
 
     // Initialise work queue
     g_wq.items = malloc(sizeof(WorkItem) * WORK_QUEUE_CAP);
@@ -544,6 +547,9 @@ void main_scan(char *root_path, bool verbose) {
     printf("\n");
     printf("%s\n", buffer);
     append_to_report_txt(buffer);
+
+    if (json_path)
+        write_json_report(root_path, scan_ts, g_stats.num_files, g_stats.num_files_suspect);
 
     close_file();
 }
@@ -846,8 +852,10 @@ void append_line_to_report(const char *fullPath, unsigned long file_length, bool
     // Flag files with no recognized magic number and high entropy as potentially encrypted
     int suspect = (!magic_number_found && has_high_entropy) ? 1 : 0;
 
-    if (suspect)
+    if (suspect) {
         printf("\n  [SUSPECT] %s (H: %f, MN: %s)", fullPath, H, magic_number_hex_string);
+        append_suspect_to_json_list(fullPath, H, magic_number_hex_string, file_length);
+    }
 
     snprintf(report_line_buffer, MAX_PATH_BUFFER, "%s\t%s\t%s\t%d\t%f\t%d\t%s\t%d\t%d\t%d\t%d\t%ld\t%s\t%s\t%s\t%s\n",
             fullPath,

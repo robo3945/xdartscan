@@ -1,5 +1,43 @@
 # XDartScan - Worklog
 
+## 2026-04-20 - JSON report output (-j flag)
+
+### Goal
+Add optional JSON report output via a new `-j <file.json>` CLI flag, producing a structured report alongside the existing TSV/TXT reports.
+
+### Changes
+#### `headers/report_manager.h`
+- Added `open_json_report()`, `append_suspect_to_json_list()`, `write_json_report()` declarations.
+- Added `#include <stdbool.h>` and `<time.h>` for new function signatures.
+
+#### `logic/report_manager.c`
+- Added `fp_json` static file pointer and `SuspectEntry` linked list (`g_suspect_head`, `g_suspect_tail`).
+- `open_json_report()`: opens the user-specified JSON file for writing.
+- `append_suspect_to_json_list()`: accumulates suspect entries during scan (called under existing `g_report_mutex`).
+- `write_json_report()`: serializes the full JSON document after scan completes (single-threaded, post-join).
+- `json_escape_string()`: escapes `"` and `\` in path strings for valid JSON output.
+- `close_file()`: extended to close `fp_json` and free the suspect linked list.
+
+#### `headers/scan_engine.h`
+- Updated `main_scan()` signature to accept `const char *json_path`.
+
+#### `logic/scan_engine.c`
+- `main_scan()`: captures `scan_ts = time(NULL)` at start; calls `open_json_report()` when `json_path` is set; calls `write_json_report()` after threads join.
+- `append_line_to_report()`: calls `append_suspect_to_json_list()` for every suspect file (already under `g_report_mutex`).
+
+#### `main.c`
+- Added `char *json_path = NULL` and `-j:` to `getopt` string.
+- Added `case 'j'` to parse the flag.
+- Passes `json_path` to `main_scan()`.
+- Updated help text.
+
+### Design decisions
+- Accumulate suspects in a linked list during scan (thread-safe via existing `g_report_mutex`), serialize in one pass at the end — avoids a second pass over the TSV.
+- No external JSON library: the output schema is simple and predictable, so manual `fprintf` with a small `json_escape_string` helper keeps the build dependency-free.
+- JSON path is user-specified (not auto-generated with random suffix) because `-j <file.json>` implies an explicit destination, unlike TSV/TXT which auto-name to avoid clobbering.
+
+---
+
 ## 2026-04-07 - Two-phase read optimization
 
 ### Goal

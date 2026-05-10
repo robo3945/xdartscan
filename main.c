@@ -42,6 +42,7 @@ int main(int argc, char *argv[])
     bool not_close_terminal_window = false;
     char* input_dir = NULL;
     char* config_dir = NULL;
+    char* json_path = NULL;
     // Handle long-style -clean argument before getopt
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-clean") == 0) {
@@ -51,7 +52,7 @@ int main(int argc, char *argv[])
     }
 
     if (argc >1)
-        while ((opt = getopt(argc, argv, "hvxi:c:t:")) != -1) {
+        while ((opt = getopt(argc, argv, "hvxi:c:t:j:")) != -1) {
             switch (opt) {
                 case 'v':
                     verbose = true;
@@ -67,6 +68,9 @@ int main(int argc, char *argv[])
                     continue;
                 case 't':
                     set_num_threads_from_cli((int) strtol(optarg, NULL, 10));
+                    continue;
+                case 'j':
+                    json_path = optarg;
                     continue;
                 case 'h':
                     print_help(argv[0]);
@@ -87,7 +91,7 @@ int main(int argc, char *argv[])
 
         test_and_read_config_file(verbose, config_dir);
         // CLI value takes precedence over config.ini
-        main_scan(input_dir, verbose);
+        main_scan(input_dir, verbose, json_path);
 
         if (verbose) {
             // Only to show the configuration params at the end of computation (for verbose mode)
@@ -145,6 +149,7 @@ void print_help(char *param) {
     fprintf(stdout, "-v: verbose mode\n");
     fprintf(stdout, "-x: not close terminal\n");
     fprintf(stdout, "-t <n_threads>: set number of worker threads (overrides config.ini)\n");
+    fprintf(stdout, "-j <file.json>: write JSON report to the specified file\n");
     fprintf(stdout, "-clean: delete all report and stats files in the current directory\n");
 }
 

@@ -129,3 +129,5 @@ dkms.conf
 .idea
 .iac-data
 .DS_Store
+.claude/
+CLAUDE.md

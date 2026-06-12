@@ -15,6 +15,10 @@ cmake -B cmake-build-debug -DCMAKE_BUILD_TYPE=Debug && cmake --build cmake-build
 # Configure and build (Release)
 cmake -B cmake-build-release -DCMAKE_BUILD_TYPE=Release && cmake --build cmake-build-release
 
+# Static release build for Windows/MinGW (links libgcc/libpthread statically)
+# Uncomment CMAKE_EXE_LINKER_FLAGS in CMakeLists.txt first
+cmake -B cmake-build-release-static-windows -DCMAKE_BUILD_TYPE=Release && cmake --build cmake-build-release-static-windows
+
 # Quick compile without CMake (links pthread on Linux; omit -lpthread on macOS)
 cc -std=c99 -Wall -Wextra -o /tmp/xdartscan main.c logic/scan_engine.c logic/random_test.c logic/config_manager.c logic/report_manager.c misc/utils.c -lm -lpthread
 
@@ -24,12 +28,17 @@ cd cmake-build-debug && ctest -V
 # Run a single test by name
 cd cmake-build-debug && ctest -V -R test_signatures
 
-# Run the scanner
-./cmake-build-debug/xdartscan -i <dir_to_scan> -c config.ini -v -t 8
+# Run the scanner (with optional JSON report)
+./cmake-build-debug/xdartscan -i <dir_to_scan> -c config.ini -v -t 8 -j report.json
 
 # Delete all report*.tsv and stats*.txt files in the current directory
 ./cmake-build-debug/xdartscan -clean
 ```
+
+### Tests
+
+- `test_signatures` — smoke-tests `sort_signatures()` on `g_well_known_mn[]` (verifies qsort comparator doesn't crash/corrupt)
+- `test_entropy` — unit-tests `calc_rand_idx()` entropy calculation with known inputs
 
 ## Architecture
 
@@ -43,11 +52,11 @@ misc/utils.c            → File I/O helpers, string utils, formatting (size, ti
 headers/                → All .h files; key types: MagicNumber (file_signatures.h), GlobStat (config.h)
 ```
 
-**Hot path**: `p_scan_files()` → `p_scan_file()` → single `fread` for magic bytes + entropy buffer → `p_binary_search()` on sorted signatures → `append_line_to_report()`.
+**Hot path**: `p_scan_files()` → `wq_push()` → worker `p_scan_file()` → read 4 bytes for magic → `p_binary_search()` → if unrecognized: read up to 64KB for entropy → `append_line_to_report()`.
 
 ## Key Design Decisions
 
-- **Single-read optimization**: one `fread` per file serves both magic number extraction (first 4 bytes via bit-shift) and entropy calculation — no double I/O.
+- **Two-phase read**: phase 1 reads only 4 bytes for magic number extraction (bit-shift, no string parsing). If a known signature matches, the file is closed immediately — no entropy I/O. Phase 2 (only for unrecognized files) `malloc`s a 64KB buffer (`SCAN_READ_BUF_SIZE`) and reads up to `MAX_FILE_SIZE` bytes for entropy. This avoids heap allocation and I/O for the majority of recognized files.
 - **Stack-allocated paths**: `normalize_path` and path construction use stack buffers (`MAX_PATH_BUFFER = 2048`) to avoid malloc/free in the recursive scan loop.
 - **`d_type` fast-path**: on systems with `_DIRENT_HAVE_D_TYPE`, file vs directory is resolved without `stat()`.
 - **Signatures**: 397 entries in `g_well_known_mn[]` (file_signatures.h), sorted at startup by `qsort`, searched by `p_binary_search()`. Matching tries 4-byte then 3-byte prefixes.
@@ -59,7 +68,7 @@ headers/                → All .h files; key types: MagicNumber (file_signature
 
 `ENTROPY_TH` (default 7.99), `MIN_FILE_SIZE` (4000), `MAX_FILE_SIZE` (10000000), `DEBUG_PRINT`, `THROUGHPUT_TEST`, `NUM_THREADS` (default 4) — all parsed as key=value pairs.
 
-Note: `ENTROPY_TH` uses a comma as decimal separator in config.ini (`7,99`) — this is locale-dependent. The CLI `-t` flag takes precedence over `NUM_THREADS` from config.ini.
+Note: `ENTROPY_TH` uses a comma as decimal separator in config.ini (`7,99`) — locale-dependent. `main.c` calls `setlocale(LC_NUMERIC, ".OCP")` (Windows OCP) so `strtod`/`sscanf` parse the comma correctly. The CLI `-t` flag takes precedence over `NUM_THREADS` from config.ini; this is enforced via `set_num_threads_from_cli()` which sets a flag that `read_config_file()` checks before overwriting.
 
 ## Worklog
 

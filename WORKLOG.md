@@ -1,5 +1,16 @@
 # XDartScan - Worklog
 
+## 2026-06-12 — Correzione CLAUDE.md e documentazione
+
+- Corretta descrizione "single-read optimization" → "two-phase read" (rifletteva implementazione pre-2026-04-07)
+- Aggiornato hot path architetturale: aggiunto `wq_push()` e buffer 64KB esplicito
+- Aggiunta variante build statica Windows (`cmake-build-release-static-windows`) a CLAUDE.md e README
+- Documentati i test: `test_signatures` (smoke-test su `sort_signatures`), `test_entropy` (unit-test `calc_rand_idx`)
+- Documentati `setlocale(LC_NUMERIC, ".OCP")` e meccanismo `set_num_threads_from_cli()` in CLAUDE.md
+- Aggiunto flag `-j` all'esempio di esecuzione in CLAUDE.md
+
+---
+
 ## 2026-04-20 - JSON report output (-j flag)
 
 ### Goal

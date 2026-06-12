@@ -16,7 +16,7 @@
 
 void print_help(char* param);
 void clean_reports(void);
-void test_and_read_config_file(bool verbose, char *config_dir);
+void test_and_read_config_file(bool verbose, char *config_path);
 
 /**
  * Entry point of the application. Parses command-line arguments, processes the input directory,
@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
     bool verbose = false;
     bool not_close_terminal_window = false;
     char* input_dir = NULL;
-    char* config_dir = NULL;
+    char* config_path = NULL;
     char* json_path = NULL;
     // Handle long-style -clean argument before getopt
     for (int i = 1; i < argc; i++) {
@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
                     input_dir = optarg;
                     continue;
                 case 'c':
-                    config_dir = optarg;
+                    config_path = optarg;
                     continue;
                 case 't':
                     set_num_threads_from_cli((int) strtol(optarg, NULL, 10));
@@ -89,13 +89,13 @@ int main(int argc, char *argv[])
     if (input_dir!=NULL && is_directory(input_dir)) {
         print_help(argv[0]);
 
-        test_and_read_config_file(verbose, config_dir);
+        test_and_read_config_file(verbose, config_path);
         // CLI value takes precedence over config.ini
         main_scan(input_dir, verbose, json_path);
 
         if (verbose) {
             // Only to show the configuration params at the end of computation (for verbose mode)
-            test_and_read_config_file(verbose, config_dir);
+            test_and_read_config_file(verbose, config_path);
         }
 
         if (not_close_terminal_window) {
@@ -121,14 +121,20 @@ int main(int argc, char *argv[])
  * @param config_dir The directory where the configuration file is expected to be located.
  *                   Pass NULL to use the default search paths.
  */
-void test_and_read_config_file(bool verbose, char *config_dir) {
-    if (config_dir == NULL) {
+void test_and_read_config_file(bool verbose, char *config_path) {
+    if (config_path == NULL) {
         if (read_config_file("config.ini", verbose))
             if (read_config_file("../config.ini", verbose))
                 printf("Configuration file not found in path: \"%s\"", "../config.ini");
+    } else if (is_directory(config_path)) {
+        char path[MAX_PATH_BUFFER];
+        snprintf(path, sizeof(path), "%s/config.ini", config_path);
+        if (read_config_file(path, verbose))
+            printf("Configuration file not found in path: \"%s\"", path);
+    } else {
+        if (read_config_file(config_path, verbose))
+            printf("Configuration file not found in path: \"%s\"", config_path);
     }
-    else if (read_config_file(config_dir, verbose))
-        printf("Configuration file not found in path: \"%s\"", config_dir);
 }
 
 /**
@@ -142,7 +148,7 @@ void print_help(char *param) {
         "  \\  /| | | |/ _` | '__| __\\___ \\ / __/ _` | '_ \\ \n"
         "  /  \\| |_| | (_| | |  | |_ ___) | (_| (_| | | | |\n"
         " /_/\\_\\____/ \\__,_|_|   \\__|____/ \\___\\__,_|_| |_|\n"
-        "                                          v. 1.2\n\n");
+        "                                          v. 1.3\n\n");
     fprintf(stdout, "Usage: %s -i <dir_to_scan> -c <config_file_path> -v\n", param);
     fprintf(stdout, "-i <dir_to_scan>\n");
     fprintf(stdout, "-c <config_file_path>\n");

@@ -182,7 +182,7 @@ char *trim(const char *src) {
     char *dst = malloc(sizeof(char) * (strlen(src) + 1));
     int k = 0;
     for (int j = 0; src[j] != '\0'; j++) {
-        if (!(src[j] == ' ' || src[j] == '\t' || src[j] == '\n')) {
+        if (!(src[j] == ' ' || src[j] == '\t' || src[j] == '\n' || src[j] == '\r')) {
             dst[k] = src[j];
             k++;
         }

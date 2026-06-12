@@ -8,7 +8,6 @@
 #include "../headers/utils.h"
 
 #define CONFIG_MAXLINE 2048
-#define CONFIG_MAXPARAM 256
 
 // Default value
 double ENTROPY_TH=7.00;
@@ -43,9 +42,8 @@ int read_config_file(char* filename, const bool verbose) {
         printf("\n---------------------------- CONFIG ---------------------------- \n");
         printf("Config path: %s\n\n", filename);
 
-        while (!feof(fp)) {
-            char line[CONFIG_MAXLINE];
-            fgets(line, CONFIG_MAXLINE, fp);
+        char line[CONFIG_MAXLINE];
+        while (fgets(line, CONFIG_MAXLINE, fp) != NULL) {
 
             const char* delim = "=";
             int num_token = 0;
@@ -70,16 +68,15 @@ int read_config_file(char* filename, const bool verbose) {
                                 DEBUG_PRINT = (int) strtol(param_value, NULL, 10);
                                 verbose?printf("Config param: %s value: \t\t%d\n","DEBUG_PRINT",DEBUG_PRINT):0;
                             }
-                            // THROUGHPUT_TEST
-                            else if (strncmp(param_name, "THROUGHPUT_TEST", CONFIG_MAXPARAM - 1) == 0) {
+                            else if (strcmp(param_name, "THROUGHPUT_TEST") == 0) {
                                 THROUGHPUT_TEST = (int) strtol(param_value, NULL, 10);
                                 verbose?printf("Config param: %s value: \t\t%d\n","THROUGHPUT_TEST",THROUGHPUT_TEST):0;
                             }
-                            else if (strncmp(param_name, "MIN_FILE_SIZE", MIN_FILE_SIZE - 1) == 0) {
+                            else if (strcmp(param_name, "MIN_FILE_SIZE") == 0) {
                                 MIN_FILE_SIZE = (int) strtol(param_value, NULL, 10);
                                 verbose?printf("Config param: %s value: \t\t%d\n","MIN_FILE_SIZE",MIN_FILE_SIZE):0;
                             }
-                            else if (strncmp(param_name, "MAX_FILE_SIZE", MAX_FILE_SIZE - 1) == 0) {
+                            else if (strcmp(param_name, "MAX_FILE_SIZE") == 0) {
                                 MAX_FILE_SIZE = (int) strtol(param_value, NULL, 10);
                                 verbose?printf("Config param: %s value: \t\t%d\n","MAX_FILE_SIZE",MAX_FILE_SIZE):0;
                             }

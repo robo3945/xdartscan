@@ -151,6 +151,9 @@ cmake -B cmake-build-debug -DCMAKE_BUILD_TYPE=Debug && cmake --build cmake-build
 # Release build
 cmake -B cmake-build-release -DCMAKE_BUILD_TYPE=Release && cmake --build cmake-build-release
 
+# Static release build for Windows/MinGW (uncomment CMAKE_EXE_LINKER_FLAGS in CMakeLists.txt first)
+cmake -B cmake-build-release-static-windows -DCMAKE_BUILD_TYPE=Release && cmake --build cmake-build-release-static-windows
+
 # Quick single-command compile (macOS — omit -lpthread; Linux — keep it)
 cc -std=c99 -Wall -Wextra -o xdartscan \
    main.c logic/scan_engine.c logic/random_test.c \

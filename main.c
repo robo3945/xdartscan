@@ -157,6 +157,13 @@ void print_help(char *param) {
     fprintf(stdout, "-t <n_threads>: set number of worker threads (overrides config.ini)\n");
     fprintf(stdout, "-j <file.json>: write JSON report to the specified file\n");
     fprintf(stdout, "-clean: delete all report and stats files in the current directory\n");
+    fprintf(stdout, "\nExample config file:\n");
+    fprintf(stdout, "  ENTROPY_TH=7,00\n");
+    fprintf(stdout, "  DEBUG_PRINT=0\n");
+    fprintf(stdout, "  THROUGHPUT_TEST=0\n");
+    fprintf(stdout, "  MIN_FILE_SIZE=500\n");
+    fprintf(stdout, "  MAX_FILE_SIZE=10000000\n");
+    fprintf(stdout, "  NUM_THREADS=4\n");
 }
 
 /**

@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
+#include <string.h>
+#include <ctype.h>
 #include <stdbool.h>
 #include "../headers/file_signatures.h"
 #include "../headers/config_manager.h"
@@ -8,6 +10,51 @@
 #include "../headers/utils.h"
 
 #define CONFIG_MAXLINE 2048
+
+/* Known config keys (must match the example shown by -h) */
+static const char * const KNOWN_KEYS[] = {
+    "ENTROPY_TH", "DEBUG_PRINT", "THROUGHPUT_TEST",
+    "MIN_FILE_SIZE", "MAX_FILE_SIZE", "NUM_THREADS"
+};
+#define KNOWN_KEYS_COUNT 6
+
+/**
+ * Parse integer strictly: all non-whitespace chars after digits → fail.
+ * Returns true on success, false on parse error.
+ */
+static bool parse_int_strict(const char *s, int *out) {
+    if (!s || !*s) return false;
+    char *end = NULL;
+    long val = strtol(s, &end, 10);
+    if (end == s) return false;          /* no digits consumed */
+    while (*end) { if (!isspace((unsigned char)*end)) return false; end++; }
+    *out = (int)val;
+    return true;
+}
+
+/**
+ * Parse double strictly (locale-aware, so comma decimal separator works on Windows OCP).
+ * Returns true on success, false on parse error.
+ */
+static bool parse_double_strict(const char *s, double *out) {
+    if (!s || !*s) return false;
+    char *end = NULL;
+    double val = strtod(s, &end);
+    if (end == s) return false;
+    while (*end) { if (!isspace((unsigned char)*end)) return false; end++; }
+    *out = val;
+    return true;
+}
+
+/**
+ * Check if the key is among the 6 known config keys.
+ */
+static bool is_known_key(const char *key) {
+    for (int i = 0; i < KNOWN_KEYS_COUNT; i++) {
+        if (strcmp(key, KNOWN_KEYS[i]) == 0) return true;
+    }
+    return false;
+}
 
 // Default value
 double ENTROPY_TH=7.00;
@@ -26,90 +73,209 @@ void p_populate_struct(MagicNumber *mn_array);
 /**
  * Reads a configuration file and parses its contents into respective global parameters.
  *
- * The function interprets key-value pairs in a configuration file, trims the parameters,
- * and updates the appropriate global variables for configuration settings. If verbose
- * mode is enabled, it prints the parsed parameters and their values to the standard output.
+ * Validates format against the 6 known keys shown by -h: ENTROPY_TH, DEBUG_PRINT,
+ * THROUGHPUT_TEST, MIN_FILE_SIZE, MAX_FILE_SIZE, NUM_THREADS.
+ *
+ * Validation policy:
+ *   - FATAL (exit EXIT_FAILURE): non-numeric value for a known key; MIN_FILE_SIZE > MAX_FILE_SIZE.
+ *   - WARNING (stderr, use default/clamp, continue): unknown key; malformed line (no '=');
+ *     out-of-range value for a known key.
+ *   - Silently ignored: blank lines; lines starting with '#' or ';' (comments).
  *
  * @param filename The path to the configuration file to be read.
- * @param verbose A flag indicating whether verbose output should be printed (true for verbose, false otherwise).
- * @return Returns 0 if the file is successfully parsed, or 1 if the file could not be opened.
+ * @param verbose  Print parsed params to stdout when true.
+ * @return 0 on success, 1 if the file could not be opened.
  */
 int read_config_file(char* filename, const bool verbose) {
     FILE *fp;
-    
+
     // Open and parse the INI-style config file
     if ((fp = fopen(filename, "r")) != NULL) {
         printf("\n---------------------------- CONFIG ---------------------------- \n");
         printf("Config path: %s\n\n", filename);
 
+        bool fatal_error = false;   /* set to true on any FATAL parse error */
+        int  line_no     = 0;
         char line[CONFIG_MAXLINE];
-        while (fgets(line, CONFIG_MAXLINE, fp) != NULL) {
 
-            const char* delim = "=";
-            int num_token = 0;
-            char *token = strtok(line, delim);
-            char* param_name = NULL, *param_value = NULL;
-            while( token != NULL ) {
-                switch(num_token)
-                {
+        while (fgets(line, CONFIG_MAXLINE, fp) != NULL) {
+            line_no++;
+
+            /* --- skip blank lines and comment lines (#, ;) --- */
+            char *trimmed_line = trim(line);
+            bool skip = (trimmed_line[0] == '\0' ||
+                         trimmed_line[0] == '#'  ||
+                         trimmed_line[0] == ';');
+            free(trimmed_line);
+            if (skip) continue;
+
+            /* --- split on first '=' only --- */
+            const char *delim = "=";
+            char *token      = strtok(line, delim);
+            char *param_name = NULL, *param_value = NULL;
+            int   num_token  = 0;
+
+            while (token != NULL) {
+                switch (num_token) {
                     case 0:
                         param_name = trim(token);
                         break;
-
                     case 1:
                         if (param_name) {
                             param_value = trim(token);
-                            // Use strcmp for exact key matching (no length limit needed for known keys)
-                            if (strcmp(param_name, "ENTROPY_TH") == 0) {
-                                ENTROPY_TH = strtod(param_value, NULL);
-                                verbose?printf("Config param: %s value: \t\t%f\n","ENTROPY_TH",ENTROPY_TH):0;
-                            }
-                            else if (strcmp(param_name, "DEBUG_PRINT") == 0) {
-                                DEBUG_PRINT = (int) strtol(param_value, NULL, 10);
-                                verbose?printf("Config param: %s value: \t\t%d\n","DEBUG_PRINT",DEBUG_PRINT):0;
-                            }
-                            else if (strcmp(param_name, "THROUGHPUT_TEST") == 0) {
-                                THROUGHPUT_TEST = (int) strtol(param_value, NULL, 10);
-                                verbose?printf("Config param: %s value: \t\t%d\n","THROUGHPUT_TEST",THROUGHPUT_TEST):0;
-                            }
-                            else if (strcmp(param_name, "MIN_FILE_SIZE") == 0) {
-                                MIN_FILE_SIZE = (int) strtol(param_value, NULL, 10);
-                                verbose?printf("Config param: %s value: \t\t%d\n","MIN_FILE_SIZE",MIN_FILE_SIZE):0;
-                            }
-                            else if (strcmp(param_name, "MAX_FILE_SIZE") == 0) {
-                                MAX_FILE_SIZE = (int) strtol(param_value, NULL, 10);
-                                verbose?printf("Config param: %s value: \t\t%d\n","MAX_FILE_SIZE",MAX_FILE_SIZE):0;
-                            }
-                            else if (strcmp(param_name, "NUM_THREADS") == 0 && !g_num_threads_set_from_cli) {
-                                NUM_THREADS = (int) strtol(param_value, NULL, 10);
-                                if (NUM_THREADS < 1) NUM_THREADS = 1;
-                                verbose?printf("Config param: %s value: \t\t%d\n","NUM_THREADS",NUM_THREADS):0;
-                            }
-
+                        } else {
+                            fprintf(stderr, "[CONFIG] line %d: param name is NULL: %s\n", line_no, token);
                         }
-                        else
-                            fprintf(stderr, "Param name is NULL: %s\n", token);
                         break;
-
                     default:
-                        fprintf(stderr, "Too many tokens in the config file. Check the delimitation char: %s\n", line);
+                        /* extra '=' in line: treat everything after the first value as part of value
+                           (re-join is not easy with strtok; just warn and ignore extra tokens) */
+                        fprintf(stderr, "[CONFIG] line %d: extra '=' ignored: %s\n", line_no, token);
                         break;
-
                 }
-
                 token = strtok(NULL, delim);
                 num_token++;
             }
 
-            if (param_name)
+            /* --- malformed line: no '=' found --- */
+            if (param_name && param_value == NULL) {
+                if (strlen(param_name) > 0) {
+                    fprintf(stderr, "[CONFIG] line %d WARNING: malformed line (expected KEY=VALUE): \"%s\"\n",
+                            line_no, param_name);
+                }
                 free(param_name);
-            if (param_value)
+                continue;
+            }
+            if (!param_name || !param_value) {
+                if (param_name) free(param_name);
+                if (param_value) free(param_value);
+                continue;
+            }
+
+            /* --- unknown key warning --- */
+            if (!is_known_key(param_name)) {
+                fprintf(stderr, "[CONFIG] line %d WARNING: unknown key \"%s\" (ignored)\n",
+                        line_no, param_name);
+                free(param_name);
                 free(param_value);
+                continue;
+            }
 
+            /* --- validate and assign each known key --- */
+            if (strcmp(param_name, "ENTROPY_TH") == 0) {
+                double v;
+                if (!parse_double_strict(param_value, &v)) {
+                    fprintf(stderr, "[CONFIG] line %d ERROR: ENTROPY_TH has non-numeric value \"%s\"\n",
+                            line_no, param_value);
+                    fatal_error = true;
+                } else {
+                    if (v < 0.0 || v > 8.0) {
+                        fprintf(stderr, "[CONFIG] line %d WARNING: ENTROPY_TH=%f out of range [0.0, 8.0]; value kept\n",
+                                line_no, v);
+                    }
+                    ENTROPY_TH = v;
+                    if (verbose) printf("Config param: ENTROPY_TH value: \t\t%f\n", ENTROPY_TH);
+                }
+            }
+            else if (strcmp(param_name, "DEBUG_PRINT") == 0) {
+                int v;
+                if (!parse_int_strict(param_value, &v)) {
+                    fprintf(stderr, "[CONFIG] line %d ERROR: DEBUG_PRINT has non-numeric value \"%s\"\n",
+                            line_no, param_value);
+                    fatal_error = true;
+                } else {
+                    if (v != 0 && v != 1) {
+                        fprintf(stderr, "[CONFIG] line %d WARNING: DEBUG_PRINT=%d not in {0,1}; clamped to %d\n",
+                                line_no, v, v ? 1 : 0);
+                        v = v ? 1 : 0;
+                    }
+                    DEBUG_PRINT = v;
+                    if (verbose) printf("Config param: DEBUG_PRINT value: \t\t%d\n", DEBUG_PRINT);
+                }
+            }
+            else if (strcmp(param_name, "THROUGHPUT_TEST") == 0) {
+                int v;
+                if (!parse_int_strict(param_value, &v)) {
+                    fprintf(stderr, "[CONFIG] line %d ERROR: THROUGHPUT_TEST has non-numeric value \"%s\"\n",
+                            line_no, param_value);
+                    fatal_error = true;
+                } else {
+                    if (v != 0 && v != 1) {
+                        fprintf(stderr, "[CONFIG] line %d WARNING: THROUGHPUT_TEST=%d not in {0,1}; clamped to %d\n",
+                                line_no, v, v ? 1 : 0);
+                        v = v ? 1 : 0;
+                    }
+                    THROUGHPUT_TEST = v;
+                    if (verbose) printf("Config param: THROUGHPUT_TEST value: \t\t%d\n", THROUGHPUT_TEST);
+                }
+            }
+            else if (strcmp(param_name, "MIN_FILE_SIZE") == 0) {
+                int v;
+                if (!parse_int_strict(param_value, &v)) {
+                    fprintf(stderr, "[CONFIG] line %d ERROR: MIN_FILE_SIZE has non-numeric value \"%s\"\n",
+                            line_no, param_value);
+                    fatal_error = true;
+                } else {
+                    if (v <= 0) {
+                        fprintf(stderr, "[CONFIG] line %d WARNING: MIN_FILE_SIZE=%d <= 0; kept (will match few files)\n",
+                                line_no, v);
+                    }
+                    MIN_FILE_SIZE = v;
+                    if (verbose) printf("Config param: MIN_FILE_SIZE value: \t\t%d\n", MIN_FILE_SIZE);
+                }
+            }
+            else if (strcmp(param_name, "MAX_FILE_SIZE") == 0) {
+                int v;
+                if (!parse_int_strict(param_value, &v)) {
+                    fprintf(stderr, "[CONFIG] line %d ERROR: MAX_FILE_SIZE has non-numeric value \"%s\"\n",
+                            line_no, param_value);
+                    fatal_error = true;
+                } else {
+                    if (v <= 0) {
+                        fprintf(stderr, "[CONFIG] line %d WARNING: MAX_FILE_SIZE=%d <= 0\n", line_no, v);
+                    }
+                    MAX_FILE_SIZE = v;
+                    if (verbose) printf("Config param: MAX_FILE_SIZE value: \t\t%d\n", MAX_FILE_SIZE);
+                }
+            }
+            else if (strcmp(param_name, "NUM_THREADS") == 0) {
+                if (!g_num_threads_set_from_cli) {
+                    int v;
+                    if (!parse_int_strict(param_value, &v)) {
+                        fprintf(stderr, "[CONFIG] line %d ERROR: NUM_THREADS has non-numeric value \"%s\"\n",
+                                line_no, param_value);
+                        fatal_error = true;
+                    } else {
+                        if (v < 1) {
+                            fprintf(stderr, "[CONFIG] line %d WARNING: NUM_THREADS=%d < 1; clamped to 1\n", line_no, v);
+                            v = 1;
+                        }
+                        NUM_THREADS = v;
+                        if (verbose) printf("Config param: NUM_THREADS value: \t\t%d\n", NUM_THREADS);
+                    }
+                }
+                /* else: CLI value takes precedence, silently skip */
+            }
+
+            free(param_name);
+            free(param_value);
         }
-        printf("---------------------------- ///// ---------------------------- \n");
 
+        printf("---------------------------- ///// ---------------------------- \n");
         fclose(fp);
+
+        /* --- cross-key validation --- */
+        if (!fatal_error && MIN_FILE_SIZE > MAX_FILE_SIZE) {
+            fprintf(stderr, "[CONFIG] ERROR: MIN_FILE_SIZE (%d) > MAX_FILE_SIZE (%d)\n",
+                    MIN_FILE_SIZE, MAX_FILE_SIZE);
+            fatal_error = true;
+        }
+
+        if (fatal_error) {
+            fprintf(stderr, "[CONFIG] Fatal configuration error(s) found. Aborting.\n");
+            exit(EXIT_FAILURE);
+        }
+
     } else {
         return 1;
     }

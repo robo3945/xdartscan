@@ -1,5 +1,32 @@
 # XDartScan - Worklog
 
+## 2026-06-15 — Config file validation + esempio -h
+
+### Goal
+Aggiungere validazione del file di configurazione coerente con il formato mostrato da `xdartscan -h`.
+
+### Changes
+
+#### `main.c`
+- `print_help()`: aggiunto blocco "Example config file:" con i 6 parametri noti (ENTROPY_TH, DEBUG_PRINT, THROUGHPUT_TEST, MIN_FILE_SIZE, MAX_FILE_SIZE, NUM_THREADS) e i loro valori di default.
+
+#### `logic/config_manager.c`
+- Aggiunti include `<string.h>` e `<ctype.h>`.
+- Aggiunta costante `KNOWN_KEYS[]` con i 6 nomi chiave ammessi.
+- Aggiunti helper statici `parse_int_strict()` e `parse_double_strict()`: parsing con `strtol`/`strtod` + `endptr` — falliscono su garbage residuo, a differenza del vecchio `strtol(…, NULL, 10)`.
+- `read_config_file()` rifatto con validazione completa:
+  - **Silenzioso**: righe vuote e commenti (`#`, `;`).
+  - **WARNING su stderr**: chiave sconosciuta; riga senza `=`; valore fuori range (ENTROPY_TH ∉ [0,8]; DEBUG_PRINT/THROUGHPUT_TEST ∉ {0,1}; size ≤ 0; NUM_THREADS < 1). Il valore fuori range viene clampato/tenuto e l'esecuzione prosegue.
+  - **ERRORE GRAVE + `exit(EXIT_FAILURE)`**: valore non numerico per chiave nota; MIN_FILE_SIZE > MAX_FILE_SIZE (controllo cross-key dopo chiusura file).
+  - Traccia numero di riga in ogni messaggio di errore.
+  - Precedenza CLI su `NUM_THREADS` mantenuta (via `g_num_threads_set_from_cli`).
+
+### Design decisions
+- `exit()` interno a `read_config_file()` è coerente con lo stile del progetto (altri abort avvengono nello stesso modo nei vari `if(is_directory…)` in main.c).
+- Nessuna modifica agli header o alle firme di funzione: la validazione è trasparente ai chiamanti.
+
+---
+
 ## 2026-06-12 — Correzione CLAUDE.md e documentazione
 
 - Corretta descrizione "single-read optimization" → "two-phase read" (rifletteva implementazione pre-2026-04-07)

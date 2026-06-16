@@ -1,5 +1,13 @@
 # XDartScan - Worklog
 
+## 2026-06-15 — Versione in macro centrale
+
+- `headers/config.h`: aggiunto `#define XDARTSCAN_VERSION "1.3"` vicino agli altri define globali.
+- `main.c` `print_help()`: sostituito literal `"v. 1.3"` con `"v. " XDARTSCAN_VERSION` (concatenazione string literal C99 — il preprocessore espande la macro prima della concatenazione).
+- Unico punto da aggiornare per futuri bump di versione.
+
+---
+
 ## 2026-06-15 — Config file validation + esempio -h
 
 ### Goal

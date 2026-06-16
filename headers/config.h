@@ -25,6 +25,8 @@ typedef struct GlobalStatsStruct {
 
 extern GlobStat g_stats;
 
+#define XDARTSCAN_VERSION "1.3.1"
+
 #define BILLION  1000000000.0
 #define MAX_SET_SIZE 256
 

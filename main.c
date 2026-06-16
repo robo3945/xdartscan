@@ -148,7 +148,7 @@ void print_help(char *param) {
         "  \\  /| | | |/ _` | '__| __\\___ \\ / __/ _` | '_ \\ \n"
         "  /  \\| |_| | (_| | |  | |_ ___) | (_| (_| | | | |\n"
         " /_/\\_\\____/ \\__,_|_|   \\__|____/ \\___\\__,_|_| |_|\n"
-        "                                          v. 1.3\n\n");
+        "                                          v. " XDARTSCAN_VERSION "\n\n");
     fprintf(stdout, "Usage: %s -i <dir_to_scan> -c <config_file_path> -v\n", param);
     fprintf(stdout, "-i <dir_to_scan>\n");
     fprintf(stdout, "-c <config_file_path>\n");
